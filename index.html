@@ -68,7 +68,9 @@
     body.locked main,
     body.locked nav,
     body.not-admin [data-view="admin"],
-    body.not-admin #view-admin {
+    body.not-admin [data-view="audit"],
+    body.not-admin #view-admin,
+    body.not-admin #view-audit {
       display: none !important;
     }
     aside {
@@ -268,6 +270,22 @@
       background: #f7f8f4;
     }
     .right { text-align: right; }
+    .audit-table th:first-child,
+    .audit-table td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      background: white;
+      min-width: 170px;
+    }
+    .audit-table th:first-child {
+      background: #f7f8f4;
+      z-index: 2;
+    }
+    .audit-table .missing {
+      color: var(--muted);
+      font-style: italic;
+    }
     .empty {
       padding: 34px;
       text-align: center;
@@ -355,6 +373,7 @@
         <button class="nav-btn active" type="button" data-view="predictions">📝 Predicciones</button>
         <button class="nav-btn" type="button" data-view="standings">🏆 Tabla</button>
         <button class="nav-btn" type="button" data-view="history">📋 Historial</button>
+        <button class="nav-btn" type="button" data-view="audit">🔍 Predicciones por jornada</button>
         <button class="nav-btn" type="button" data-view="admin">🛠️ Admin</button>
       </nav>
     </aside>
@@ -453,6 +472,23 @@
               <button id="addMatch" class="primary" type="button" style="width:100%; margin:10px 0 14px">Agregar partido</button>
               <div id="customMatchList" class="people-list"></div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-audit" class="hidden">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Predicciones por jornada</h2>
+            <span class="badge result">Solo lectura</span>
+          </div>
+          <div class="panel-body">
+            <div class="toolbar">
+              <div class="field"><label for="auditRound">Jornada</label><select id="auditRound"></select></div>
+              <div class="field"><label for="auditSearch">Buscar jugador</label><input id="auditSearch" placeholder="Nombre del participante" /></div>
+              <button id="downloadAudit" class="blue" type="button">Descargar CSV</button>
+            </div>
+            <div class="table-wrap"><table id="auditTable" class="audit-table"></table></div>
           </div>
         </div>
       </section>
@@ -733,6 +769,52 @@
           </tr>`;
         }).join("")}</tbody>`;
     }
+    function auditRows() {
+      const round = byId("auditRound").value || String(matches[0]?.round || 1);
+      const term = byId("auditSearch").value.trim().toLowerCase();
+      const roundMatches = matches.filter(match => String(match.round) === String(round));
+      const users = state.users.filter(user => !term || user.toLowerCase().includes(term));
+      return { round, roundMatches, users };
+    }
+    function renderPredictionAudit() {
+      const table = byId("auditTable");
+      const { round, roundMatches, users } = auditRows();
+      if (!roundMatches.length) {
+        table.innerHTML = `<tbody><tr><td class="empty">No hay partidos para esta jornada.</td></tr></tbody>`;
+        return;
+      }
+      const headers = roundMatches.map(match => `<th>${countryInline(match.home)} vs ${countryInline(match.away)}<div class="meta">${formatDate(match.date)}</div></th>`).join("");
+      const rows = users.map(user => {
+        const cells = roundMatches.map(match => {
+          const pred = state.predictions[user]?.[match.id];
+          const value = hasCompleteScore(pred) ? `${pred.home}-${pred.away}` : `<span class="missing">Sin predicción</span>`;
+          return `<td class="right">${value}</td>`;
+        }).join("");
+        return `<tr><td><b>${escapeHtml(user)}</b></td>${cells}</tr>`;
+      }).join("");
+      table.innerHTML = `
+        <thead><tr><th>Participante</th>${headers}</tr></thead>
+        <tbody>${rows || `<tr><td class="empty" colspan="${roundMatches.length + 1}">No hay jugadores con ese filtro.</td></tr>`}</tbody>`;
+    }
+    function downloadAuditCsv() {
+      const { round, roundMatches, users } = auditRows();
+      const header = ["Participante", ...roundMatches.map(match => `${match.home} vs ${match.away}`)];
+      const rows = users.map(user => [
+        user,
+        ...roundMatches.map(match => {
+          const pred = state.predictions[user]?.[match.id];
+          return hasCompleteScore(pred) ? `${pred.home}-${pred.away}` : "Sin prediccion";
+        })
+      ]);
+      const csv = [header, ...rows].map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `predicciones-jornada-${round}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
     function renderPeople() {
       byId("peopleList").innerHTML = state.users.map(user => `<div class="person">
         <b>${user}</b>
@@ -770,6 +852,7 @@
     }
     function fillSelects() {
       const previousReceptionRound = byId("receptionRound").value;
+      const previousAuditRound = byId("auditRound").value;
       const rounds = ["all", ...new Set(matches.map(m => String(m.round)))];
       const groups = ["all", ...Array.from(new Set(matches.map(m => m.group))).sort()];
       const roundHtml = rounds.map(r => `<option value="${r}">${r === "all" ? "Todas" : `Jornada ${r}`}</option>`).join("");
@@ -778,6 +861,8 @@
       ["roundFilter","adminRoundFilter"].forEach(id => byId(id).innerHTML = roundHtml);
       byId("receptionRound").innerHTML = receptionRoundHtml;
       if (rounds.includes(previousReceptionRound)) byId("receptionRound").value = previousReceptionRound;
+      byId("auditRound").innerHTML = receptionRoundHtml;
+      if (rounds.includes(previousAuditRound)) byId("auditRound").value = previousAuditRound;
       ["groupFilter","adminGroupFilter"].forEach(id => byId(id).innerHTML = groupHtml);
     }
     function fillUsers() {
@@ -805,6 +890,7 @@
       renderHistory();
       renderPeople();
       renderCustomMatches();
+      renderPredictionAudit();
     }
     function saveScoreSet(prefix, target) {
       document.querySelectorAll(`[data-score^="${prefix}-home-"]`).forEach(input => {
@@ -817,7 +903,7 @@
 
     document.querySelectorAll(".nav-btn").forEach(btn => btn.addEventListener("click", () => {
       if (!session.authenticated) return toast("Primero debes entrar con tu usuario");
-      if (btn.dataset.view === "admin" && !session.admin) return toast("El módulo admin requiere clave");
+      if ((btn.dataset.view === "admin" || btn.dataset.view === "audit") && !session.admin) return toast("El módulo admin requiere clave");
       document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       document.querySelectorAll("main > section").forEach(s => s.classList.add("hidden"));
@@ -1000,6 +1086,8 @@
     byId("predictionUser").addEventListener("change", renderMatches);
     ["adminRoundFilter","adminGroupFilter","adminSearch"].forEach(id => byId(id).addEventListener("input", renderAdminMatches));
     byId("historyUser").addEventListener("change", renderHistory);
+    ["auditRound","auditSearch"].forEach(id => byId(id).addEventListener("input", renderPredictionAudit));
+    byId("downloadAudit").addEventListener("click", downloadAuditCsv);
     setInterval(() => {
       byId("colombiaTime").textContent = new Intl.DateTimeFormat("es-CO", { timeZone: "America/Bogota", hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date());
     }, 1000);
