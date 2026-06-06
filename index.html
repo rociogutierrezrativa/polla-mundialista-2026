@@ -419,7 +419,8 @@
               <span id="adminState" class="badge"></span>
             </div>
             <div class="panel-body">
-              <label class="checkline"><input id="unlockPredictions" type="checkbox" /> Recepción de predicciones abierta</label>
+              <div class="field" style="margin-bottom:10px"><label for="receptionRound">Cierre por jornada</label><select id="receptionRound"></select></div>
+              <label class="checkline"><input id="unlockPredictions" type="checkbox" /> Recepción abierta para esta jornada</label>
               <div class="toolbar">
                 <div class="field"><label for="adminRoundFilter">Jornada</label><select id="adminRoundFilter"></select></div>
                 <div class="field"><label for="adminGroupFilter">Grupo</label><select id="adminGroupFilter"></select></div>
@@ -516,7 +517,7 @@
         users,
         passwords,
         adminPassword: base.adminPassword || DEFAULT_ADMIN_PASSWORD,
-        settings: { predictionsReceptionOpen: true, predictionsUnlocked: false, ...(base.settings || {}) },
+        settings: { predictionsReceptionOpen: true, predictionsUnlocked: false, roundReception: {}, ...(base.settings || {}) },
         customMatches: Array.isArray(base.customMatches) ? base.customMatches : [],
         predictions: base.predictions || {},
         results: base.results || {}
@@ -601,8 +602,12 @@
         hour: "2-digit", minute: "2-digit", hour12: false
       }).formatToParts(new Date()).reduce((acc, p) => (acc[p.type] = p.value, acc), {});
     }
+    function isRoundReceptionOpen(round) {
+      const saved = state.settings.roundReception?.[String(round)];
+      return saved === undefined ? !!state.settings.predictionsReceptionOpen : !!saved;
+    }
     function isLocked(match) {
-      return !state.settings.predictionsReceptionOpen;
+      return !isRoundReceptionOpen(match.round);
     }
     function hasCompleteScore(score) {
       return !!score && score.home !== "" && score.away !== "" && score.home !== undefined && score.away !== undefined;
@@ -626,16 +631,16 @@
     }
     function standings() {
       const rows = state.users.map(user => {
-        let pts = 0, exact = 0, hit = 0, played = 0;
+        let pts = 0, exact = 0, result = 0, played = 0;
         matches.forEach(match => {
           const p = pointsFor(user, match);
           const hasResult = !!state.results[match.id];
           if (hasResult) played += 1;
           pts += p;
           if (p === 3) exact += 1;
-          if (p > 0) hit += 1;
+          if (p === 1) result += 1;
         });
-        return { user, pts, exact, hit, played };
+        return { user, pts, exact, result, played };
       }).sort((a, b) => b.pts - a.pts || b.exact - a.exact || a.user.localeCompare(b.user));
       let lastPts = null, lastRank = 0;
       rows.forEach((row, idx) => {
@@ -709,8 +714,8 @@
     }
     function renderStandings() {
       byId("standingsTable").innerHTML = `
-        <thead><tr><th>Puesto</th><th>Participante</th><th class="right">Puntos</th><th class="right">Exactos</th><th class="right">Aciertos</th><th class="right">Partidos cerrados</th></tr></thead>
-        <tbody>${standings().map(r => `<tr><td><b>${r.rank}</b></td><td>${r.user}</td><td class="right"><b>${r.pts}</b></td><td class="right">${r.exact}</td><td class="right">${r.hit}</td><td class="right">${r.played}</td></tr>`).join("")}</tbody>`;
+        <thead><tr><th>Puesto</th><th>Participante</th><th class="right">Puntos</th><th class="right">Exactos</th><th class="right">Resultados</th><th class="right">Partidos cerrados</th></tr></thead>
+        <tbody>${standings().map(r => `<tr><td><b>${r.rank}</b></td><td>${r.user}</td><td class="right"><b>${r.pts}</b></td><td class="right">${r.exact}</td><td class="right">${r.result}</td><td class="right">${r.played}</td></tr>`).join("")}</tbody>`;
     }
     function renderHistory() {
       const user = byId("historyUser").value || session.user;
@@ -756,17 +761,23 @@
       byId("statMatches").textContent = matches.length;
       byId("statDone").textContent = Object.keys(state.results).length;
       byId("roleLine").textContent = session.authenticated ? (session.admin ? `Admin activo · ${session.user}` : `Jugador · ${session.user}`) : "Selecciona tu usuario para continuar.";
-      byId("adminState").textContent = session.admin ? (state.settings.predictionsReceptionOpen ? "Admin activo · recepción abierta" : "Admin activo · recepción cerrada") : "Solo lectura";
+      const selectedRound = byId("receptionRound").value || String(matches[0]?.round || 1);
+      const selectedRoundOpen = isRoundReceptionOpen(selectedRound);
+      byId("adminState").textContent = session.admin ? `Admin activo · Jornada ${selectedRound} ${selectedRoundOpen ? "abierta" : "cerrada"}` : "Solo lectura";
       byId("predictionUserWrap").classList.toggle("hidden", !session.admin);
-      byId("unlockPredictions").checked = !!state.settings.predictionsReceptionOpen;
+      byId("unlockPredictions").checked = selectedRoundOpen;
       byId("adminPasswordEdit").value = state.adminPassword || DEFAULT_ADMIN_PASSWORD;
     }
     function fillSelects() {
+      const previousReceptionRound = byId("receptionRound").value;
       const rounds = ["all", ...new Set(matches.map(m => String(m.round)))];
       const groups = ["all", ...Array.from(new Set(matches.map(m => m.group))).sort()];
       const roundHtml = rounds.map(r => `<option value="${r}">${r === "all" ? "Todas" : `Jornada ${r}`}</option>`).join("");
+      const receptionRoundHtml = rounds.filter(r => r !== "all").map(r => `<option value="${r}">Jornada ${r}</option>`).join("");
       const groupHtml = groups.map(g => `<option value="${g}">${g === "all" ? "Todos" : `Grupo ${g}`}</option>`).join("");
       ["roundFilter","adminRoundFilter"].forEach(id => byId(id).innerHTML = roundHtml);
+      byId("receptionRound").innerHTML = receptionRoundHtml;
+      if (rounds.includes(previousReceptionRound)) byId("receptionRound").value = previousReceptionRound;
       ["groupFilter","adminGroupFilter"].forEach(id => byId(id).innerHTML = groupHtml);
     }
     function fillUsers() {
@@ -960,11 +971,14 @@
     });
     byId("unlockPredictions").addEventListener("change", () => {
       if (!session.admin) return toast("Debes entrar como administrador");
-      state.settings.predictionsReceptionOpen = byId("unlockPredictions").checked;
+      state.settings.roundReception ||= {};
+      const round = byId("receptionRound").value;
+      state.settings.roundReception[round] = byId("unlockPredictions").checked;
       persist();
       renderAll();
-      toast(state.settings.predictionsReceptionOpen ? "Recepción de predicciones abierta" : "Recepción de predicciones cerrada");
+      toast(byId("unlockPredictions").checked ? `Jornada ${round} abierta` : `Jornada ${round} cerrada`);
     });
+    byId("receptionRound").addEventListener("change", renderStats);
     byId("resetDemo").addEventListener("click", async () => {
       if (!session.admin) return toast("Debes entrar como administrador");
       if (!confirm("Esto borra predicciones, resultados y usuarios personalizados.")) return;

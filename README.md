@@ -39,12 +39,12 @@ Opcion simple:
 
 El administrador puede cambiar esas claves desde la app.
 
-## Cierre de recepcion
+## Cierre de recepcion por jornada
 
-En el modulo `Admin`, el interruptor `Recepcion de predicciones abierta` controla si los jugadores pueden guardar predicciones.
+En el modulo `Admin`, selecciona una jornada en `Cierre por jornada` y usa el interruptor `Recepcion abierta para esta jornada`.
 
-- Activado: los jugadores pueden guardar predicciones que aun no hayan guardado y que no tengan marcador final.
-- Desactivado: ningun jugador puede guardar predicciones.
+- Activado: los jugadores pueden guardar predicciones de esa jornada que aun no hayan guardado y que no tengan marcador final.
+- Desactivado: ningun jugador puede guardar predicciones de esa jornada.
 - Una vez un jugador guarda una prediccion completa, queda bloqueada para ese jugador.
 - Si el administrador ya cargo el marcador final de un partido, los jugadores tampoco pueden modificar esa prediccion.
 - El administrador siempre puede editar predicciones y marcadores.
