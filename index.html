@@ -1,0 +1,984 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Polla Mundialista 2026</title>
+  <style>
+    :root {
+      --bg: #f5f6f1;
+      --panel: #ffffff;
+      --ink: #17201b;
+      --muted: #667067;
+      --line: #d9ded6;
+      --green: #1f7a4d;
+      --blue: #2167a8;
+      --red: #b13a32;
+      --gold: #c58a1f;
+      --shadow: 0 10px 30px rgba(20, 32, 26, .08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    button, input, select { font: inherit; }
+    button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: 6px;
+      min-height: 38px;
+      padding: 0 12px;
+      cursor: pointer;
+    }
+    button.primary { background: var(--green); border-color: var(--green); color: white; }
+    button.blue { background: var(--blue); border-color: var(--blue); color: white; }
+    button.danger { background: var(--red); border-color: var(--red); color: white; }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    input, select {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: white;
+      color: var(--ink);
+      min-height: 38px;
+      padding: 8px 10px;
+      width: 100%;
+    }
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 260px 1fr;
+    }
+    body.locked .app {
+      grid-template-columns: 1fr;
+      place-items: center;
+      padding: 18px;
+    }
+    body.locked aside {
+      position: static;
+      width: min(460px, 100%);
+      height: auto;
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+    }
+    body.locked main,
+    body.locked nav,
+    body.not-admin [data-view="admin"],
+    body.not-admin #view-admin {
+      display: none !important;
+    }
+    aside {
+      background: #14261e;
+      color: white;
+      padding: 22px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 20px;
+      line-height: 1.1;
+      margin-bottom: 22px;
+    }
+    .ball {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: #f4f0e2;
+      color: #14261e;
+      flex: 0 0 auto;
+    }
+    .session {
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 18px;
+      background: rgba(255,255,255,.06);
+    }
+    .session label { display: block; font-size: 12px; color: rgba(255,255,255,.72); margin-bottom: 6px; }
+    .session select, .session input { margin-bottom: 8px; }
+    .role-line { color: rgba(255,255,255,.72); font-size: 13px; margin: 8px 0 0; }
+    nav { display: grid; gap: 6px; }
+    .nav-btn {
+      width: 100%;
+      justify-content: flex-start;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      border-color: transparent;
+      background: transparent;
+      color: rgba(255,255,255,.82);
+    }
+    .nav-btn.active { background: rgba(255,255,255,.14); color: white; }
+    main { padding: 28px; }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+    h1 { margin: 0 0 6px; font-size: clamp(26px, 4vw, 42px); letter-spacing: 0; }
+    h2 { margin: 0; font-size: 22px; }
+    h3 { margin: 0 0 10px; font-size: 16px; }
+    p { color: var(--muted); }
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(130px, 1fr));
+      gap: 10px;
+      min-width: 420px;
+    }
+    .stat {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: var(--shadow);
+    }
+    .stat b { display: block; font-size: 24px; }
+    .stat span { color: var(--muted); font-size: 12px; }
+    .toolbar {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(150px, 180px)) 1fr auto;
+      gap: 10px;
+      align-items: end;
+      margin: 16px 0;
+    }
+    .toolbar label, .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .panel-head {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .panel-body { padding: 16px; }
+    .match-list { display: grid; gap: 10px; }
+    .match {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 1fr 220px 150px;
+      gap: 14px;
+      align-items: center;
+      background: white;
+    }
+    .teams {
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+    }
+    .team {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 650;
+      min-width: 0;
+    }
+    .team span:last-child { overflow-wrap: anywhere; }
+    .flag {
+      width: 34px;
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      overflow: hidden;
+      border-radius: 3px;
+      background: #eef1ea;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+    }
+    .flag img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .inline-country {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    .inline-country .flag {
+      width: 24px;
+      height: 17px;
+    }
+    .meta { color: var(--muted); font-size: 12px; }
+    .score-inputs {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+    .score-inputs input { text-align: center; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 24px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #eef1ea;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .badge.locked { background: #f6e7e5; color: var(--red); }
+    .badge.open { background: #e4f2ea; color: var(--green); }
+    .badge.result { background: #e5edf8; color: var(--blue); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: middle;
+      font-size: 14px;
+    }
+    th {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0;
+      background: #f7f8f4;
+    }
+    .right { text-align: right; }
+    .empty {
+      padding: 34px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .admin-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 16px;
+    }
+    .people-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 8px;
+      max-height: 360px;
+      overflow: auto;
+    }
+    .person {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px 10px;
+      display: grid;
+      gap: 8px;
+    }
+    .person-actions { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; }
+    .checkline {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 14px;
+      margin: 0 0 14px;
+    }
+    .checkline input { width: auto; min-height: auto; }
+    .hidden { display: none !important; }
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      background: #14261e;
+      color: white;
+      padding: 12px 14px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: .2s ease;
+      z-index: 50;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+      aside { position: static; height: auto; }
+      main { padding: 18px; }
+      .topbar { display: grid; }
+      .status-grid { min-width: 0; grid-template-columns: repeat(3, 1fr); }
+      .toolbar { grid-template-columns: 1fr 1fr; }
+      .match { grid-template-columns: 1fr; }
+      .admin-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 620px) {
+      main { padding: 12px; }
+      .status-grid, .toolbar { grid-template-columns: 1fr; }
+      th, td { padding: 8px; }
+      .table-wrap { overflow-x: auto; }
+      .panel-head { align-items: flex-start; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand"><div class="ball">⚽</div><div>Polla Mundialista 2026</div></div>
+      <div class="session">
+        <label for="userSelect">Usuario</label>
+        <select id="userSelect"></select>
+        <label for="adminPass">Contraseña</label>
+        <input id="adminPass" type="password" placeholder="Contraseña del usuario" />
+        <button id="loginBtn" class="primary" type="button">Entrar</button>
+        <button id="logoutBtn" type="button" class="hidden" style="width:100%; margin-top:8px">Cerrar sesión</button>
+        <p class="role-line" id="roleLine"></p>
+      </div>
+      <nav>
+        <button class="nav-btn active" type="button" data-view="predictions">📝 Predicciones</button>
+        <button class="nav-btn" type="button" data-view="standings">🏆 Tabla</button>
+        <button class="nav-btn" type="button" data-view="history">📋 Historial</button>
+        <button class="nav-btn" type="button" data-view="admin">🛠️ Admin</button>
+      </nav>
+    </aside>
+
+    <main>
+      <div class="topbar">
+        <div>
+          <h1>Polla Mundialista 2026</h1>
+          <p>Predicciones por jornada, bloqueo diario a las 10:00 a. m. de Colombia, resultados oficiales y ranking automático.</p>
+        </div>
+        <div class="status-grid">
+          <div class="stat"><b id="statUsers">0</b><span>Participantes</span></div>
+          <div class="stat"><b id="statMatches">0</b><span>Partidos</span></div>
+          <div class="stat"><b id="statDone">0</b><span>Resultados cargados</span></div>
+        </div>
+      </div>
+
+      <section id="view-predictions">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Predicciones</h2>
+            <span class="badge">Hora Colombia: <span id="colombiaTime"></span></span>
+          </div>
+          <div class="panel-body">
+            <div class="toolbar">
+              <div id="predictionUserWrap" class="field hidden"><label for="predictionUser">Participante</label><select id="predictionUser"></select></div>
+              <div class="field"><label for="roundFilter">Jornada</label><select id="roundFilter"></select></div>
+              <div class="field"><label for="groupFilter">Grupo</label><select id="groupFilter"></select></div>
+              <div class="field"><label for="searchMatch">Buscar partido</label><input id="searchMatch" placeholder="Equipo, fecha o grupo" /></div>
+              <button id="savePredictions" class="primary" type="button">Guardar</button>
+            </div>
+            <div id="matchList" class="match-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-standings" class="hidden">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Tabla de posiciones</h2>
+            <span class="badge result">Exacto 3 pts · Resultado 1 pt</span>
+          </div>
+          <div class="table-wrap"><table id="standingsTable"></table></div>
+        </div>
+      </section>
+
+      <section id="view-history" class="hidden">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Historial de puntos</h2>
+            <div style="min-width:220px"><select id="historyUser"></select></div>
+          </div>
+          <div class="table-wrap"><table id="historyTable"></table></div>
+        </div>
+      </section>
+
+      <section id="view-admin" class="hidden">
+        <div class="admin-grid">
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Marcadores finales</h2>
+              <span id="adminState" class="badge"></span>
+            </div>
+            <div class="panel-body">
+              <label class="checkline"><input id="unlockPredictions" type="checkbox" /> Habilitar recepción de predicciones aunque ya haya pasado la hora de cierre</label>
+              <div class="toolbar">
+                <div class="field"><label for="adminRoundFilter">Jornada</label><select id="adminRoundFilter"></select></div>
+                <div class="field"><label for="adminGroupFilter">Grupo</label><select id="adminGroupFilter"></select></div>
+                <div class="field"><label for="adminSearch">Buscar</label><input id="adminSearch" placeholder="Equipo o fecha" /></div>
+                <button id="saveResults" class="blue" type="button">Guardar</button>
+              </div>
+              <div id="adminMatchList" class="match-list"></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Participantes</h2></div>
+            <div class="panel-body">
+              <div class="field"><label for="newUser">Nuevo usuario</label><input id="newUser" placeholder="Nombre del participante" /></div>
+              <div class="field" style="margin-top:8px"><label for="newUserPassword">Contraseña inicial</label><input id="newUserPassword" placeholder="jugador2026" /></div>
+              <button id="addUser" class="primary" type="button" style="width:100%; margin:10px 0 14px">Agregar</button>
+              <div class="field" style="margin-bottom:10px"><label for="adminPasswordEdit">Contraseña administrador</label><input id="adminPasswordEdit" placeholder="admin2026" /></div>
+              <button id="saveAdminPassword" class="blue" type="button" style="width:100%; margin-bottom:14px">Guardar clave admin</button>
+              <div id="peopleList" class="people-list"></div>
+              <button id="resetDemo" class="danger" type="button" style="width:100%; margin-top:14px">Reiniciar datos</button>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Agregar partido</h2></div>
+            <div class="panel-body">
+              <div class="field"><label for="newMatchGroup">Grupo</label><input id="newMatchGroup" maxlength="3" placeholder="A" /></div>
+              <div class="field" style="margin-top:8px"><label for="newMatchRound">Jornada</label><input id="newMatchRound" type="number" min="1" placeholder="17" /></div>
+              <div class="field" style="margin-top:8px"><label for="newMatchDate">Fecha</label><input id="newMatchDate" type="date" /></div>
+              <div class="field" style="margin-top:8px"><label for="newMatchHome">Local</label><input id="newMatchHome" placeholder="Pais local" /></div>
+              <div class="field" style="margin-top:8px"><label for="newMatchAway">Visitante</label><input id="newMatchAway" placeholder="Pais visitante" /></div>
+              <button id="addMatch" class="primary" type="button" style="width:100%; margin:10px 0 14px">Agregar partido</button>
+              <div id="customMatchList" class="people-list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = "https://fmhekplcvspwfqiswocr.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtaGVrcGxjdnNwd2ZxaXN3b2NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2ODU4NjMsImV4cCI6MjA5NjI2MTg2M30.RCGT4DaRN3rpTZlJSct3kkS6jmkIA-9LUtIogb5ZbBA";
+    const supabaseReady = SUPABASE_URL.startsWith("https://") && SUPABASE_ANON_KEY.length > 30;
+    const db = supabaseReady ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+    const DEFAULT_ADMIN_PASSWORD = "admin2026";
+    const DEFAULT_PLAYER_PASSWORD = "jugador2026";
+    const STORAGE_KEY = "polla-mundialista-2026";
+    const defaultUsers = Array.from({ length: 50 }, (_, i) => `Jugador ${String(i + 1).padStart(2, "0")}`);
+    const flagCodes = {
+      "Mexico":"mx","Sudafrica":"za","Corea del Sur":"kr","Rep. Checa":"cz","Canada":"ca","Bosnia":"ba",
+      "Estados Unidos":"us","Paraguay":"py","Catar":"qa","Suiza":"ch","Brasil":"br","Marruecos":"ma",
+      "Haiti":"ht","Escocia":"gb-sct","Australia":"au","Turquia":"tr","Alemania":"de","Curazao":"cw",
+      "Paises Bajos":"nl","Japon":"jp","Costa de Marfil":"ci","Ecuador":"ec","Suecia":"se","Tunez":"tn",
+      "España":"es","Cabo Verde":"cv","Belgica":"be","Egipto":"eg","Arabia Saudita":"sa","Uruguay":"uy",
+      "Iran":"ir","Nueva Zelanda":"nz","Francia":"fr","Senegal":"sn","Irak":"iq","Noruega":"no",
+      "Argentina":"ar","Argelia":"dz","Austria":"at","Jordania":"jo","Portugal":"pt","Rep. de Congo":"cg",
+      "Rep. del Congo":"cg","Inglaterra":"gb-eng","Croacia":"hr","Ghana":"gh","Panama":"pa",
+      "Uzbekistan":"uz","Colombia":"co"
+    };
+    const baseMatches = [
+      ["A",1,"2026-06-11","Mexico","Sudafrica"],["A",1,"2026-06-11","Corea del Sur","Rep. Checa"],
+      ["B",2,"2026-06-12","Canada","Bosnia"],["D",2,"2026-06-12","Estados Unidos","Paraguay"],
+      ["B",3,"2026-06-13","Catar","Suiza"],["C",3,"2026-06-13","Brasil","Marruecos"],["C",3,"2026-06-13","Haiti","Escocia"],["D",3,"2026-06-13","Australia","Turquia"],
+      ["E",4,"2026-06-14","Alemania","Curazao"],["F",4,"2026-06-14","Paises Bajos","Japon"],["E",4,"2026-06-14","Costa de Marfil","Ecuador"],["F",4,"2026-06-14","Suecia","Tunez"],
+      ["H",5,"2026-06-15","España","Cabo Verde"],["G",5,"2026-06-15","Belgica","Egipto"],["H",5,"2026-06-15","Arabia Saudita","Uruguay"],["G",5,"2026-06-15","Iran","Nueva Zelanda"],
+      ["I",6,"2026-06-16","Francia","Senegal"],["I",6,"2026-06-16","Irak","Noruega"],["J",6,"2026-06-16","Argentina","Argelia"],["J",6,"2026-06-16","Austria","Jordania"],
+      ["K",7,"2026-06-17","Portugal","Rep. de Congo"],["L",7,"2026-06-17","Inglaterra","Croacia"],["L",7,"2026-06-17","Ghana","Panama"],["K",7,"2026-06-17","Uzbekistan","Colombia"],
+      ["A",8,"2026-06-18","Rep. Checa","Sudafrica"],["B",8,"2026-06-18","Suiza","Bosnia"],["B",8,"2026-06-18","Canada","Catar"],["A",8,"2026-06-18","Mexico","Corea del Sur"],
+      ["D",9,"2026-06-19","Estados Unidos","Australia"],["C",9,"2026-06-19","Escocia","Marruecos"],["C",9,"2026-06-19","Brasil","Haiti"],["D",9,"2026-06-19","Turquia","Paraguay"],
+      ["F",10,"2026-06-20","Paises Bajos","Suecia"],["E",10,"2026-06-20","Alemania","Costa de Marfil"],["E",10,"2026-06-20","Ecuador","Curazao"],["F",10,"2026-06-20","Tunez","Japon"],
+      ["H",11,"2026-06-21","España","Arabia Saudita"],["G",11,"2026-06-21","Belgica","Iran"],["H",11,"2026-06-21","Uruguay","Cabo Verde"],["G",11,"2026-06-21","Nueva Zelanda","Egipto"],
+      ["J",12,"2026-06-22","Argentina","Austria"],["I",12,"2026-06-22","Francia","Irak"],["I",12,"2026-06-22","Noruega","Senegal"],["J",12,"2026-06-22","Jordania","Argelia"],
+      ["K",12,"2026-06-23","Portugal","Uzbekistan"],["L",12,"2026-06-23","Inglaterra","Ghana"],["L",12,"2026-06-23","Panama","Croacia"],["K",12,"2026-06-23","Colombia","Rep. de Congo"],
+      ["B",13,"2026-06-24","Suiza","Canada"],["B",13,"2026-06-24","Bosnia","Catar"],["C",13,"2026-06-24","Marruecos","Haiti"],["C",13,"2026-06-24","Escocia","Brasil"],["A",13,"2026-06-24","Sudafrica","Corea del Sur"],["A",13,"2026-06-24","Rep. Checa","Mexico"],
+      ["E",14,"2026-06-25","Curazao","Costa de Marfil"],["E",14,"2026-06-25","Ecuador","Alemania"],["F",14,"2026-06-25","Tunez","Paises Bajos"],["F",14,"2026-06-25","Japon","Suecia"],["D",14,"2026-06-25","Turquia","Estados Unidos"],["D",14,"2026-06-25","Paraguay","Australia"],
+      ["I",15,"2026-06-26","Noruega","Francia"],["I",15,"2026-06-26","Senegal","Irak"],["H",15,"2026-06-26","Cabo Verde","Arabia Saudita"],["H",15,"2026-06-26","Uruguay","España"],["G",15,"2026-06-26","Nueva Zelanda","Belgica"],["G",15,"2026-06-26","Egipto","Iran"],
+      ["L",16,"2026-06-27","Panama","Inglaterra"],["L",16,"2026-06-27","Croacia","Ghana"],["K",16,"2026-06-27","Colombia","Portugal"],["K",16,"2026-06-27","Rep. del Congo","Uzbekistan"],["J",16,"2026-06-27","Argelia","Austria"],["J",16,"2026-06-27","Jordania","Argentina"]
+    ].map((m, i) => ({ id: `m${i + 1}`, group: m[0], round: m[1], date: m[2], home: m[3], away: m[4], custom: false }));
+
+    let state = loadState();
+    let matches = buildMatches();
+    let session = { user: null, admin: false, authenticated: false, password: "" };
+
+    function defaultPasswords(users) {
+      return Object.fromEntries(users.map(user => [user, DEFAULT_PLAYER_PASSWORD]));
+    }
+    function normalizeState(raw) {
+      const base = raw || {};
+      const users = Array.isArray(base.users) && base.users.length ? base.users : defaultUsers;
+      const passwords = { ...defaultPasswords(users), ...(base.passwords || {}) };
+      users.forEach(user => { passwords[user] ||= DEFAULT_PLAYER_PASSWORD; });
+      return {
+        users,
+        passwords,
+        adminPassword: base.adminPassword || DEFAULT_ADMIN_PASSWORD,
+        settings: { predictionsUnlocked: false, ...(base.settings || {}) },
+        customMatches: Array.isArray(base.customMatches) ? base.customMatches : [],
+        predictions: base.predictions || {},
+        results: base.results || {}
+      };
+    }
+    function loadState() {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+      return normalizeState(saved);
+    }
+    async function loadLoginOptions() {
+      if (!db) return;
+      const { data, error } = await db.rpc("get_login_options");
+      if (error) {
+        toast("No se pudo conectar a Supabase");
+        return;
+      }
+      if (data?.users?.length) {
+        state.users = data.users;
+        state.adminPassword = "";
+        state.passwords = defaultPasswords(state.users);
+        fillUsers();
+        renderStats();
+      }
+    }
+    async function loginRemote(selected, password) {
+      if (!db) return null;
+      const { data, error } = await db.rpc("login_and_state", {
+        p_user: selected,
+        p_password: password,
+        p_admin: selected === "Administrador"
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.message || "Login invalido");
+      return normalizeState(data.state);
+    }
+    async function persistRemote() {
+      if (!db || !session.authenticated) return;
+      const fn = session.admin ? "save_admin_state" : "save_user_predictions";
+      const args = session.admin
+        ? { p_password: session.password, p_state: state }
+        : { p_user: session.user, p_password: session.password, p_predictions: state.predictions[session.user] || {} };
+      const { data, error } = await db.rpc(fn, args);
+      if (error || data?.ok === false) throw error || new Error(data?.message || "No se pudo guardar");
+    }
+    function buildMatches() {
+      return [...baseMatches, ...state.customMatches].sort((a, b) => a.date.localeCompare(b.date) || a.round - b.round || a.id.localeCompare(b.id));
+    }
+    function persist() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      if (db && session.authenticated) {
+        persistRemote().catch(() => toast("No se pudo guardar en Supabase"));
+      }
+    }
+    function byId(id) { return document.getElementById(id); }
+    function toast(msg) {
+      const el = byId("toast");
+      el.textContent = msg;
+      el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 2200);
+    }
+    function formatDate(iso) {
+      const [y, m, d] = iso.split("-");
+      return `${d}/${m}/${y}`;
+    }
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;" }[char]));
+    }
+    function flagMarkup(country) {
+      const code = flagCodes[country];
+      if (!code) return `<span class="flag">--</span>`;
+      return `<span class="flag"><img src="https://flagcdn.com/48x36/${code}.png" alt="Bandera de ${escapeHtml(country)}" loading="lazy" onerror="this.replaceWith(document.createTextNode('${code.toUpperCase()}'))"></span>`;
+    }
+    function countryLabel(country) {
+      return `${flagMarkup(country)}<span>${escapeHtml(country)}</span>`;
+    }
+    function countryInline(country) {
+      return `<span class="inline-country">${flagMarkup(country)}<span>${escapeHtml(country)}</span></span>`;
+    }
+    function colombiaNowParts() {
+      return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Bogota", year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", hour12: false
+      }).formatToParts(new Date()).reduce((acc, p) => (acc[p.type] = p.value, acc), {});
+    }
+    function isLocked(match) {
+      if (state.settings.predictionsUnlocked) return false;
+      const now = colombiaNowParts();
+      const today = `${now.year}-${now.month}-${now.day}`;
+      if (today > match.date) return true;
+      if (today < match.date) return false;
+      return Number(now.hour) >= 10;
+    }
+    function predictionTargetUser() {
+      return session.admin ? (byId("predictionUser").value || session.user) : session.user;
+    }
+    function outcome(score) {
+      if (!score || score.home === "" || score.away === "") return "";
+      const h = Number(score.home), a = Number(score.away);
+      if (h > a) return "L";
+      if (h < a) return "V";
+      return "E";
+    }
+    function pointsFor(user, match) {
+      const p = state.predictions[user]?.[match.id];
+      const r = state.results[match.id];
+      if (!p || !r || p.home === "" || p.away === "" || r.home === "" || r.away === "") return 0;
+      if (Number(p.home) === Number(r.home) && Number(p.away) === Number(r.away)) return 3;
+      return outcome(p) === outcome(r) ? 1 : 0;
+    }
+    function standings() {
+      const rows = state.users.map(user => {
+        let pts = 0, exact = 0, hit = 0, played = 0;
+        matches.forEach(match => {
+          const p = pointsFor(user, match);
+          const hasResult = !!state.results[match.id];
+          if (hasResult) played += 1;
+          pts += p;
+          if (p === 3) exact += 1;
+          if (p > 0) hit += 1;
+        });
+        return { user, pts, exact, hit, played };
+      }).sort((a, b) => b.pts - a.pts || b.exact - a.exact || a.user.localeCompare(b.user));
+      let lastPts = null, lastRank = 0;
+      rows.forEach((row, idx) => {
+        if (row.pts !== lastPts) lastRank = idx + 1;
+        row.rank = lastRank;
+        lastPts = row.pts;
+      });
+      return rows;
+    }
+    function filteredMatches(roundId, groupId, searchId) {
+      const round = byId(roundId).value;
+      const group = byId(groupId).value;
+      const term = byId(searchId).value.trim().toLowerCase();
+      return matches.filter(m => {
+        const text = `${m.group} Jornada ${m.round} ${formatDate(m.date)} ${m.home} ${m.away}`.toLowerCase();
+        return (round === "all" || String(m.round) === round) && (group === "all" || m.group === group) && (!term || text.includes(term));
+      });
+    }
+    function scoreBlock(match, score, locked, prefix) {
+      return `
+        <div class="score-inputs">
+          <input data-score="${prefix}-home-${match.id}" type="number" min="0" max="30" value="${score?.home ?? ""}" ${locked ? "disabled" : ""} />
+          <span class="meta">vs</span>
+          <input data-score="${prefix}-away-${match.id}" type="number" min="0" max="30" value="${score?.away ?? ""}" ${locked ? "disabled" : ""} />
+        </div>`;
+    }
+    function renderMatches() {
+      const list = byId("matchList");
+      const targetUser = predictionTargetUser();
+      const userPredictions = state.predictions[targetUser] || {};
+      const rows = filteredMatches("roundFilter", "groupFilter", "searchMatch");
+      list.innerHTML = rows.length ? rows.map(match => {
+        const locked = isLocked(match);
+        const inputLocked = locked && !session.admin;
+        const pred = userPredictions[match.id] || {};
+        const result = state.results[match.id];
+        const pts = pointsFor(targetUser, match);
+        return `<article class="match">
+          <div class="teams">
+            <div class="meta">Grupo ${match.group} · Jornada ${match.round} · ${formatDate(match.date)}</div>
+            <div class="team">${countryLabel(match.home)}</div>
+            <div class="team">${countryLabel(match.away)}</div>
+          </div>
+          ${scoreBlock(match, pred, inputLocked, "pred")}
+          <div>
+            <span class="badge ${locked ? "locked" : "open"}">${locked ? (session.admin ? "Admin editable" : "Bloqueado") : "Abierto"}</span>
+            <div class="meta" style="margin-top:6px">${result ? `Final: ${result.home}-${result.away} · ${pts} pts` : "Sin resultado"}</div>
+          </div>
+        </article>`;
+      }).join("") : `<div class="empty">No hay partidos con esos filtros.</div>`;
+    }
+    function renderAdminMatches() {
+      const list = byId("adminMatchList");
+      const rows = filteredMatches("adminRoundFilter", "adminGroupFilter", "adminSearch");
+      list.innerHTML = rows.map(match => {
+        const result = state.results[match.id] || {};
+        return `<article class="match">
+          <div class="teams">
+            <div class="meta">Grupo ${match.group} · Jornada ${match.round} · ${formatDate(match.date)}</div>
+            <div class="team">${countryLabel(match.home)}</div>
+            <div class="team">${countryLabel(match.away)}</div>
+          </div>
+          ${scoreBlock(match, result, !session.admin, "result")}
+          <span class="badge result">${result.home !== undefined ? "Cargado" : "Pendiente"}</span>
+        </article>`;
+      }).join("");
+    }
+    function renderStandings() {
+      byId("standingsTable").innerHTML = `
+        <thead><tr><th>Puesto</th><th>Participante</th><th class="right">Puntos</th><th class="right">Exactos</th><th class="right">Aciertos</th><th class="right">Partidos cerrados</th></tr></thead>
+        <tbody>${standings().map(r => `<tr><td><b>${r.rank}</b></td><td>${r.user}</td><td class="right"><b>${r.pts}</b></td><td class="right">${r.exact}</td><td class="right">${r.hit}</td><td class="right">${r.played}</td></tr>`).join("")}</tbody>`;
+    }
+    function renderHistory() {
+      const user = byId("historyUser").value || session.user;
+      byId("historyTable").innerHTML = `
+        <thead><tr><th>Fecha</th><th>Partido</th><th>Predicción</th><th>Final</th><th class="right">Puntos</th></tr></thead>
+        <tbody>${matches.map(match => {
+          const pred = state.predictions[user]?.[match.id];
+          const res = state.results[match.id];
+          return `<tr>
+            <td>${formatDate(match.date)}</td>
+            <td>${countryInline(match.home)} vs ${countryInline(match.away)}</td>
+            <td>${pred ? `${pred.home}-${pred.away}` : "Sin predicción"}</td>
+            <td>${res ? `${res.home}-${res.away}` : "Pendiente"}</td>
+            <td class="right"><b>${pointsFor(user, match)}</b></td>
+          </tr>`;
+        }).join("")}</tbody>`;
+    }
+    function renderPeople() {
+      byId("peopleList").innerHTML = state.users.map(user => `<div class="person">
+        <b>${user}</b>
+        <div class="person-actions">
+          <input data-password-user="${user}" value="${state.passwords[user] || DEFAULT_PLAYER_PASSWORD}" ${session.admin ? "" : "disabled"} />
+          <button data-save-password="${user}" type="button" ${session.admin ? "" : "disabled"}>Clave</button>
+          <button data-remove-user="${user}" type="button" ${session.admin ? "" : "disabled"}>Quitar</button>
+        </div>
+      </div>`).join("");
+    }
+    function renderCustomMatches() {
+      byId("customMatchList").innerHTML = state.customMatches.length ? state.customMatches.map(match => `<div class="person">
+        <b>${countryInline(match.home)} vs ${countryInline(match.away)}</b>
+        <span class="meta">Grupo ${match.group} · Jornada ${match.round} · ${formatDate(match.date)}</span>
+        <button data-remove-match="${match.id}" type="button" ${session.admin ? "" : "disabled"}>Eliminar</button>
+      </div>`).join("") : `<div class="empty" style="padding:18px">No hay partidos agregados.</div>`;
+    }
+    function renderStats() {
+      document.body.classList.toggle("locked", !session.authenticated);
+      document.body.classList.toggle("not-admin", !session.admin);
+      byId("loginBtn").classList.toggle("hidden", session.authenticated);
+      byId("logoutBtn").classList.toggle("hidden", !session.authenticated);
+      byId("userSelect").disabled = session.authenticated;
+      byId("adminPass").disabled = session.authenticated;
+      byId("statUsers").textContent = state.users.length;
+      byId("statMatches").textContent = matches.length;
+      byId("statDone").textContent = Object.keys(state.results).length;
+      byId("roleLine").textContent = session.authenticated ? (session.admin ? `Admin activo · ${session.user}` : `Jugador · ${session.user}`) : "Selecciona tu usuario para continuar.";
+      byId("adminState").textContent = session.admin ? (state.settings.predictionsUnlocked ? "Admin activo · predicciones reabiertas" : "Admin activo") : "Solo lectura";
+      byId("predictionUserWrap").classList.toggle("hidden", !session.admin);
+      byId("unlockPredictions").checked = !!state.settings.predictionsUnlocked;
+      byId("adminPasswordEdit").value = state.adminPassword || DEFAULT_ADMIN_PASSWORD;
+    }
+    function fillSelects() {
+      const rounds = ["all", ...new Set(matches.map(m => String(m.round)))];
+      const groups = ["all", ...Array.from(new Set(matches.map(m => m.group))).sort()];
+      const roundHtml = rounds.map(r => `<option value="${r}">${r === "all" ? "Todas" : `Jornada ${r}`}</option>`).join("");
+      const groupHtml = groups.map(g => `<option value="${g}">${g === "all" ? "Todos" : `Grupo ${g}`}</option>`).join("");
+      ["roundFilter","adminRoundFilter"].forEach(id => byId(id).innerHTML = roundHtml);
+      ["groupFilter","adminGroupFilter"].forEach(id => byId(id).innerHTML = groupHtml);
+    }
+    function fillUsers() {
+      const html = state.users.map(u => `<option value="${u}">${u}</option>`).join("") + `<option value="Administrador">Administrador</option>`;
+      const previousPredictionUser = byId("predictionUser").value;
+      byId("userSelect").innerHTML = html;
+      byId("predictionUser").innerHTML = state.users.map(u => `<option value="${u}">${u}</option>`).join("");
+      byId("historyUser").innerHTML = session.authenticated && !session.admin
+        ? `<option value="${session.user}">${session.user}</option>`
+        : state.users.map(u => `<option value="${u}">${u}</option>`).join("");
+      byId("historyUser").disabled = session.authenticated && !session.admin;
+      if (session.user) {
+        byId("userSelect").value = session.admin ? "Administrador" : session.user;
+        byId("historyUser").value = session.user;
+        byId("predictionUser").value = state.users.includes(previousPredictionUser) ? previousPredictionUser : session.user;
+      }
+    }
+    function renderAll() {
+      fillUsers();
+      renderStats();
+      if (!session.authenticated) return;
+      renderMatches();
+      renderAdminMatches();
+      renderStandings();
+      renderHistory();
+      renderPeople();
+      renderCustomMatches();
+    }
+    function saveScoreSet(prefix, target) {
+      document.querySelectorAll(`[data-score^="${prefix}-home-"]`).forEach(input => {
+        const id = input.dataset.score.replace(`${prefix}-home-`, "");
+        const away = document.querySelector(`[data-score="${prefix}-away-${id}"]`);
+        if (input.value === "" && away.value === "") delete target[id];
+        else target[id] = { home: input.value === "" ? "" : Number(input.value), away: away.value === "" ? "" : Number(away.value) };
+      });
+    }
+
+    document.querySelectorAll(".nav-btn").forEach(btn => btn.addEventListener("click", () => {
+      if (!session.authenticated) return toast("Primero debes entrar con tu usuario");
+      if (btn.dataset.view === "admin" && !session.admin) return toast("El módulo admin requiere clave");
+      document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll("main > section").forEach(s => s.classList.add("hidden"));
+      byId(`view-${btn.dataset.view}`).classList.remove("hidden");
+      renderAll();
+    }));
+    byId("loginBtn").addEventListener("click", async () => {
+      const selected = byId("userSelect").value;
+      const password = byId("adminPass").value;
+      if (db) {
+        try {
+          state = await loginRemote(selected, password);
+          matches = buildMatches();
+          fillSelects();
+        } catch (error) {
+          session = { user: null, admin: false, authenticated: false, password: "" };
+          renderAll();
+          return toast(selected === "Administrador" ? "Clave admin incorrecta" : "Contraseña incorrecta");
+        }
+      } else {
+        if (selected === "Administrador" && password !== state.adminPassword) {
+          session = { user: null, admin: false, authenticated: false, password: "" };
+          renderAll();
+          return toast("Clave admin incorrecta");
+        }
+        if (selected !== "Administrador" && password !== state.passwords[selected]) {
+          session = { user: null, admin: false, authenticated: false, password: "" };
+          renderAll();
+          return toast("Contraseña incorrecta");
+        }
+      }
+      session.user = selected === "Administrador" ? state.users[0] : selected;
+      session.admin = selected === "Administrador";
+      session.authenticated = true;
+      session.password = password;
+      document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+      document.querySelector('[data-view="predictions"]').classList.add("active");
+      document.querySelectorAll("main > section").forEach(s => s.classList.add("hidden"));
+      byId("view-predictions").classList.remove("hidden");
+      renderAll();
+    });
+    byId("logoutBtn").addEventListener("click", () => {
+      session = { user: null, admin: false, authenticated: false, password: "" };
+      byId("adminPass").value = "";
+      if (db) loadLoginOptions();
+      renderAll();
+    });
+    byId("savePredictions").addEventListener("click", () => {
+      if (!session.authenticated) return toast("Primero debes entrar con tu usuario");
+      const targetUser = predictionTargetUser();
+      state.predictions[targetUser] ||= {};
+      const target = state.predictions[targetUser];
+      document.querySelectorAll('[data-score^="pred-home-"]').forEach(input => {
+        const id = input.dataset.score.replace("pred-home-", "");
+        const match = matches.find(m => m.id === id);
+        const away = document.querySelector(`[data-score="pred-away-${id}"]`);
+        if (isLocked(match) && !session.admin) return;
+        if (input.value === "" && away.value === "") delete target[id];
+        else target[id] = { home: input.value === "" ? "" : Number(input.value), away: away.value === "" ? "" : Number(away.value) };
+      });
+      persist();
+      renderAll();
+      toast(session.admin ? `Predicciones guardadas para ${targetUser}` : "Predicciones guardadas");
+    });
+    byId("saveResults").addEventListener("click", () => {
+      if (!session.admin) return toast("Debes entrar como administrador");
+      saveScoreSet("result", state.results);
+      persist();
+      renderAll();
+      toast("Marcadores finales guardados");
+    });
+    byId("addUser").addEventListener("click", () => {
+      if (!session.admin) return toast("Debes entrar como administrador");
+      const name = byId("newUser").value.trim();
+      if (!name || state.users.includes(name)) return toast("Nombre inválido o repetido");
+      state.users.push(name);
+      state.passwords[name] = byId("newUserPassword").value.trim() || DEFAULT_PLAYER_PASSWORD;
+      byId("newUser").value = "";
+      byId("newUserPassword").value = "";
+      persist();
+      renderAll();
+    });
+    byId("saveAdminPassword").addEventListener("click", () => {
+      if (!session.admin) return toast("Debes entrar como administrador");
+      const nextPassword = byId("adminPasswordEdit").value.trim();
+      if (!nextPassword) return toast("La clave admin no puede quedar vacía");
+      state.adminPassword = nextPassword;
+      persist();
+      renderAll();
+      toast("Clave admin actualizada");
+    });
+    byId("addMatch").addEventListener("click", () => {
+      if (!session.admin) return toast("Debes entrar como administrador");
+      const group = byId("newMatchGroup").value.trim().toUpperCase();
+      const round = Number(byId("newMatchRound").value);
+      const date = byId("newMatchDate").value;
+      const home = byId("newMatchHome").value.trim();
+      const away = byId("newMatchAway").value.trim();
+      if (!group || !round || !date || !home || !away) return toast("Completa grupo, jornada, fecha y equipos");
+      const match = { id: `custom-${Date.now()}`, group, round, date, home, away, custom: true };
+      state.customMatches.push(match);
+      matches = buildMatches();
+      ["newMatchGroup","newMatchRound","newMatchDate","newMatchHome","newMatchAway"].forEach(id => byId(id).value = "");
+      persist();
+      fillSelects();
+      renderAll();
+      toast("Partido agregado");
+    });
+    byId("customMatchList").addEventListener("click", ev => {
+      const matchId = ev.target.dataset.removeMatch;
+      if (!matchId || !session.admin) return;
+      state.customMatches = state.customMatches.filter(match => match.id !== matchId);
+      delete state.results[matchId];
+      Object.values(state.predictions).forEach(userPredictions => delete userPredictions[matchId]);
+      matches = buildMatches();
+      persist();
+      fillSelects();
+      renderAll();
+      toast("Partido eliminado");
+    });
+    byId("peopleList").addEventListener("click", ev => {
+      const user = ev.target.dataset.removeUser;
+      const passwordUser = ev.target.dataset.savePassword;
+      if (passwordUser && session.admin) {
+        const input = document.querySelector(`[data-password-user="${passwordUser}"]`);
+        const nextPassword = input.value.trim();
+        if (!nextPassword) return toast("La contraseña no puede quedar vacía");
+        state.passwords[passwordUser] = nextPassword;
+        persist();
+        renderAll();
+        return toast(`Clave actualizada para ${passwordUser}`);
+      }
+      if (!user || !session.admin) return;
+      state.users = state.users.filter(u => u !== user);
+      delete state.predictions[user];
+      delete state.passwords[user];
+      if (session.user === user) session.user = state.users[0] || "Jugador 01";
+      persist();
+      renderAll();
+    });
+    byId("unlockPredictions").addEventListener("change", () => {
+      if (!session.admin) return toast("Debes entrar como administrador");
+      state.settings.predictionsUnlocked = byId("unlockPredictions").checked;
+      persist();
+      renderAll();
+      toast(state.settings.predictionsUnlocked ? "Predicciones reabiertas" : "Cierre automático activado");
+    });
+    byId("resetDemo").addEventListener("click", async () => {
+      if (!session.admin) return toast("Debes entrar como administrador");
+      if (!confirm("Esto borra predicciones, resultados y usuarios personalizados.")) return;
+      localStorage.removeItem(STORAGE_KEY);
+      state = loadState();
+      matches = buildMatches();
+      if (db) {
+        try {
+          await persistRemote();
+        } catch (error) {
+          return toast("No se pudo reiniciar Supabase");
+        }
+      }
+      session = { user: null, admin: false, authenticated: false, password: "" };
+      fillSelects();
+      renderAll();
+    });
+    ["roundFilter","groupFilter","searchMatch"].forEach(id => byId(id).addEventListener("input", renderMatches));
+    byId("predictionUser").addEventListener("change", renderMatches);
+    ["adminRoundFilter","adminGroupFilter","adminSearch"].forEach(id => byId(id).addEventListener("input", renderAdminMatches));
+    byId("historyUser").addEventListener("change", renderHistory);
+    setInterval(() => {
+      byId("colombiaTime").textContent = new Intl.DateTimeFormat("es-CO", { timeZone: "America/Bogota", hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date());
+    }, 1000);
+    fillSelects();
+    renderAll();
+    loadLoginOptions();
+  </script>
+</body>
+</html>
