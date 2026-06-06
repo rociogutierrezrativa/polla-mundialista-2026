@@ -419,7 +419,7 @@
               <span id="adminState" class="badge"></span>
             </div>
             <div class="panel-body">
-              <label class="checkline"><input id="unlockPredictions" type="checkbox" /> Habilitar recepción de predicciones aunque ya haya pasado la hora de cierre</label>
+              <label class="checkline"><input id="unlockPredictions" type="checkbox" /> Recepción de predicciones abierta</label>
               <div class="toolbar">
                 <div class="field"><label for="adminRoundFilter">Jornada</label><select id="adminRoundFilter"></select></div>
                 <div class="field"><label for="adminGroupFilter">Grupo</label><select id="adminGroupFilter"></select></div>
@@ -516,7 +516,7 @@
         users,
         passwords,
         adminPassword: base.adminPassword || DEFAULT_ADMIN_PASSWORD,
-        settings: { predictionsUnlocked: false, ...(base.settings || {}) },
+        settings: { predictionsReceptionOpen: true, predictionsUnlocked: false, ...(base.settings || {}) },
         customMatches: Array.isArray(base.customMatches) ? base.customMatches : [],
         predictions: base.predictions || {},
         results: base.results || {}
@@ -602,12 +602,10 @@
       }).formatToParts(new Date()).reduce((acc, p) => (acc[p.type] = p.value, acc), {});
     }
     function isLocked(match) {
-      if (state.settings.predictionsUnlocked) return false;
-      const now = colombiaNowParts();
-      const today = `${now.year}-${now.month}-${now.day}`;
-      if (today > match.date) return true;
-      if (today < match.date) return false;
-      return Number(now.hour) >= 10;
+      return !state.settings.predictionsReceptionOpen;
+    }
+    function hasCompleteScore(score) {
+      return !!score && score.home !== "" && score.away !== "" && score.home !== undefined && score.away !== undefined;
     }
     function predictionTargetUser() {
       return session.admin ? (byId("predictionUser").value || session.user) : session.user;
@@ -671,9 +669,13 @@
       const rows = filteredMatches("roundFilter", "groupFilter", "searchMatch");
       list.innerHTML = rows.length ? rows.map(match => {
         const locked = isLocked(match);
-        const inputLocked = locked && !session.admin;
         const pred = userPredictions[match.id] || {};
         const result = state.results[match.id];
+        const hasPrediction = hasCompleteScore(pred);
+        const hasResult = hasCompleteScore(result);
+        const inputLocked = !session.admin && (locked || hasPrediction || hasResult);
+        const statusText = hasResult ? "Marcador final cargado" : hasPrediction ? "Predicción guardada" : locked ? "Recepción cerrada" : "Abierto";
+        const statusClass = hasResult || hasPrediction || locked ? "locked" : "open";
         const pts = pointsFor(targetUser, match);
         return `<article class="match">
           <div class="teams">
@@ -683,7 +685,7 @@
           </div>
           ${scoreBlock(match, pred, inputLocked, "pred")}
           <div>
-            <span class="badge ${locked ? "locked" : "open"}">${locked ? (session.admin ? "Admin editable" : "Bloqueado") : "Abierto"}</span>
+            <span class="badge ${session.admin ? "result" : statusClass}">${session.admin && (hasResult || hasPrediction || locked) ? "Admin editable" : statusText}</span>
             <div class="meta" style="margin-top:6px">${result ? `Final: ${result.home}-${result.away} · ${pts} pts` : "Sin resultado"}</div>
           </div>
         </article>`;
@@ -754,9 +756,9 @@
       byId("statMatches").textContent = matches.length;
       byId("statDone").textContent = Object.keys(state.results).length;
       byId("roleLine").textContent = session.authenticated ? (session.admin ? `Admin activo · ${session.user}` : `Jugador · ${session.user}`) : "Selecciona tu usuario para continuar.";
-      byId("adminState").textContent = session.admin ? (state.settings.predictionsUnlocked ? "Admin activo · predicciones reabiertas" : "Admin activo") : "Solo lectura";
+      byId("adminState").textContent = session.admin ? (state.settings.predictionsReceptionOpen ? "Admin activo · recepción abierta" : "Admin activo · recepción cerrada") : "Solo lectura";
       byId("predictionUserWrap").classList.toggle("hidden", !session.admin);
-      byId("unlockPredictions").checked = !!state.settings.predictionsUnlocked;
+      byId("unlockPredictions").checked = !!state.settings.predictionsReceptionOpen;
       byId("adminPasswordEdit").value = state.adminPassword || DEFAULT_ADMIN_PASSWORD;
     }
     function fillSelects() {
@@ -857,17 +859,28 @@
       const targetUser = predictionTargetUser();
       state.predictions[targetUser] ||= {};
       const target = state.predictions[targetUser];
+      let invalid = 0;
+      let blocked = 0;
       document.querySelectorAll('[data-score^="pred-home-"]').forEach(input => {
         const id = input.dataset.score.replace("pred-home-", "");
         const match = matches.find(m => m.id === id);
         const away = document.querySelector(`[data-score="pred-away-${id}"]`);
-        if (isLocked(match) && !session.admin) return;
+        if (!session.admin && input.disabled) return;
+        const currentPrediction = target[id];
+        const finalResult = state.results[id];
+        if (!session.admin && (isLocked(match) || hasCompleteScore(currentPrediction) || hasCompleteScore(finalResult))) {
+          blocked += 1;
+          return;
+        }
         if (input.value === "" && away.value === "") delete target[id];
+        else if (input.value === "" || away.value === "") invalid += 1;
         else target[id] = { home: input.value === "" ? "" : Number(input.value), away: away.value === "" ? "" : Number(away.value) };
       });
       persist();
       renderAll();
-      toast(session.admin ? `Predicciones guardadas para ${targetUser}` : "Predicciones guardadas");
+      if (invalid) return toast("Completa local y visitante antes de guardar");
+      if (blocked && !session.admin) return toast("Algunas predicciones ya estaban bloqueadas");
+      toast(session.admin ? `Predicciones guardadas para ${targetUser}` : "Predicciones guardadas y bloqueadas");
     });
     byId("saveResults").addEventListener("click", () => {
       if (!session.admin) return toast("Debes entrar como administrador");
@@ -947,10 +960,10 @@
     });
     byId("unlockPredictions").addEventListener("change", () => {
       if (!session.admin) return toast("Debes entrar como administrador");
-      state.settings.predictionsUnlocked = byId("unlockPredictions").checked;
+      state.settings.predictionsReceptionOpen = byId("unlockPredictions").checked;
       persist();
       renderAll();
-      toast(state.settings.predictionsUnlocked ? "Predicciones reabiertas" : "Cierre automático activado");
+      toast(state.settings.predictionsReceptionOpen ? "Recepción de predicciones abierta" : "Recepción de predicciones cerrada");
     });
     byId("resetDemo").addEventListener("click", async () => {
       if (!session.admin) return toast("Debes entrar como administrador");

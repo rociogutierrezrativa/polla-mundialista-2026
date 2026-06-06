@@ -13,7 +13,7 @@ select true, jsonb_build_object(
   'users', to_jsonb(users.names),
   'passwords', users.passwords,
   'adminPassword', 'admin2026',
-  'settings', jsonb_build_object('predictionsUnlocked', false),
+  'settings', jsonb_build_object('predictionsReceptionOpen', true, 'predictionsUnlocked', false),
   'customMatches', '[]'::jsonb,
   'predictions', '{}'::jsonb,
   'results', '{}'::jsonb

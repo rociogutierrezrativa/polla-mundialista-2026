@@ -39,6 +39,16 @@ Opcion simple:
 
 El administrador puede cambiar esas claves desde la app.
 
+## Cierre de recepcion
+
+En el modulo `Admin`, el interruptor `Recepcion de predicciones abierta` controla si los jugadores pueden guardar predicciones.
+
+- Activado: los jugadores pueden guardar predicciones que aun no hayan guardado y que no tengan marcador final.
+- Desactivado: ningun jugador puede guardar predicciones.
+- Una vez un jugador guarda una prediccion completa, queda bloqueada para ese jugador.
+- Si el administrador ya cargo el marcador final de un partido, los jugadores tampoco pueden modificar esa prediccion.
+- El administrador siempre puede editar predicciones y marcadores.
+
 ## Importante
 
 La version local anterior usa `localStorage`. Esta version usa Supabase cuando `SUPABASE_URL` y `SUPABASE_ANON_KEY` estan configurados. Si no los configuras, funcionara solo localmente y los datos no seran compartidos.
