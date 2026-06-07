@@ -7,16 +7,18 @@
   <!-- Version Vercel: incluye vista admin "Predicciones por jornada" -->
   <style>
     :root {
-      --bg: #f5f6f1;
+      --bg: #f7f6f1;
       --panel: #ffffff;
-      --ink: #17201b;
-      --muted: #667067;
-      --line: #d9ded6;
-      --green: #1f7a4d;
-      --blue: #2167a8;
-      --red: #b13a32;
-      --gold: #c58a1f;
-      --shadow: 0 10px 30px rgba(20, 32, 26, .08);
+      --ink: #151718;
+      --muted: #606866;
+      --line: #dedbd1;
+      --green: #a8f000;
+      --blue: #7a00ff;
+      --red: #e00000;
+      --gold: #d6a63f;
+      --black: #08090a;
+      --purple: #7a00ff;
+      --shadow: 0 14px 34px rgba(8, 9, 10, .12);
     }
 
     * { box-sizing: border-box; }
@@ -36,8 +38,8 @@
       padding: 0 12px;
       cursor: pointer;
     }
-    button.primary { background: var(--green); border-color: var(--green); color: white; }
-    button.blue { background: var(--blue); border-color: var(--blue); color: white; }
+    button.primary { background: #2e8f3f; border-color: #2e8f3f; color: white; }
+    button.blue { background: var(--black); border-color: var(--black); color: white; }
     button.danger { background: var(--red); border-color: var(--red); color: white; }
     button:disabled { opacity: .55; cursor: not-allowed; }
     input, select {
@@ -75,7 +77,9 @@
       display: none !important;
     }
     aside {
-      background: #14261e;
+      background:
+        radial-gradient(circle at 90% 8%, rgba(168, 240, 0, .34), transparent 24%),
+        linear-gradient(150deg, #08090a 0%, #151718 48%, #4b007d 100%);
       color: white;
       padding: 22px;
       position: sticky;
@@ -85,21 +89,28 @@
     .brand {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       font-weight: 800;
       font-size: 20px;
       line-height: 1.1;
       margin-bottom: 22px;
     }
     .ball {
-      display: grid;
-      place-items: center;
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      background: #f4f0e2;
-      color: #14261e;
+      display: block;
+      width: 118px;
+      height: 64px;
+      border-radius: 6px;
+      background: #08090a;
       flex: 0 0 auto;
+      box-shadow: 0 10px 20px rgba(0,0,0,.24);
+      overflow: hidden;
+    }
+    .ball img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #08090a;
     }
     .session {
       border: 1px solid rgba(255,255,255,.16);
@@ -122,7 +133,7 @@
       background: transparent;
       color: rgba(255,255,255,.82);
     }
-    .nav-btn.active { background: rgba(255,255,255,.14); color: white; }
+    .nav-btn.active { background: #2e8f3f; color: white; }
     main { padding: 28px; }
     .topbar {
       display: flex;
@@ -130,6 +141,13 @@
       gap: 18px;
       align-items: flex-start;
       margin-bottom: 18px;
+      padding: 22px;
+      border-radius: 10px;
+      background:
+        radial-gradient(circle at 88% 18%, rgba(168, 240, 0, .46), transparent 20%),
+        radial-gradient(circle at 58% 0%, rgba(122, 0, 255, .18), transparent 28%),
+        linear-gradient(135deg, #ffffff 0%, #ffffff 56%, rgba(224,0,0,.08) 100%);
+      border: 1px solid var(--line);
     }
     h1 { margin: 0 0 6px; font-size: clamp(26px, 4vw, 42px); letter-spacing: 0; }
     h2 { margin: 0; font-size: 22px; }
@@ -148,6 +166,7 @@
       padding: 12px;
       box-shadow: var(--shadow);
     }
+    .stat b { color: var(--red); }
     .stat b { display: block; font-size: 24px; }
     .stat span { color: var(--muted); font-size: 12px; }
     .toolbar {
@@ -249,8 +268,8 @@
       white-space: nowrap;
     }
     .badge.locked { background: #f6e7e5; color: var(--red); }
-    .badge.open { background: #e4f2ea; color: var(--green); }
-    .badge.result { background: #e5edf8; color: var(--blue); }
+    .badge.open { background: #efffd0; color: #436100; }
+    .badge.result { background: #efe4ff; color: var(--purple); }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -360,7 +379,9 @@
 <body>
   <div class="app">
     <aside>
-      <div class="brand"><div class="ball">⚽</div><div>Polla Mundialista 2026</div></div>
+      <div class="brand"><div class="ball" aria-label="Logo Mundial 2026">
+        <img src="./world-cup-2026-logo.png" alt="Logo Mundial 2026" />
+      </div><div>Polla Mundialista 2026</div></div>
       <div class="session">
         <label for="userSelect">Usuario</label>
         <select id="userSelect"></select>
@@ -383,7 +404,7 @@
       <div class="topbar">
         <div>
           <h1>Polla Mundialista 2026</h1>
-          <p>Predicciones por jornada, bloqueo diario a las 10:00 a. m. de Colombia, resultados oficiales y ranking automático.</p>
+          <p>Predicciones por jornada, resultados oficiales y ranking automático.</p>
         </div>
         <div class="status-grid">
           <div class="stat"><b id="statUsers">0</b><span>Participantes</span></div>
