@@ -389,6 +389,11 @@
         <input id="adminPass" type="password" placeholder="Contraseña del usuario" />
         <button id="loginBtn" class="primary" type="button">Entrar</button>
         <button id="logoutBtn" type="button" class="hidden" style="width:100%; margin-top:8px">Cerrar sesión</button>
+        <div id="playerPasswordPanel" class="hidden">
+          <label for="playerNewPassword">Nueva contraseña</label>
+          <input id="playerNewPassword" type="password" placeholder="Nueva contraseña" />
+          <button id="savePlayerPassword" class="primary" type="button" style="width:100%">Cambiar contraseña</button>
+        </div>
         <p class="role-line" id="roleLine"></p>
       </div>
       <nav>
@@ -423,8 +428,6 @@
             <div class="toolbar">
               <div id="predictionUserWrap" class="field hidden"><label for="predictionUser">Participante</label><select id="predictionUser"></select></div>
               <div class="field"><label for="roundFilter">Jornada</label><select id="roundFilter"></select></div>
-              <div class="field"><label for="groupFilter">Grupo</label><select id="groupFilter"></select></div>
-              <div class="field"><label for="searchMatch">Buscar partido</label><input id="searchMatch" placeholder="Equipo, fecha o grupo" /></div>
               <button id="savePredictions" class="primary" type="button">Guardar</button>
             </div>
             <div id="matchList" class="match-list"></div>
@@ -620,6 +623,16 @@
       const { data, error } = await db.rpc(fn, args);
       if (error || data?.ok === false) throw error || new Error(data?.message || "No se pudo guardar");
     }
+    async function changePlayerPasswordRemote(newPassword) {
+      if (!db) return false;
+      const { data, error } = await db.rpc("change_user_password", {
+        p_user: session.user,
+        p_current_password: session.password,
+        p_new_password: newPassword
+      });
+      if (error || data?.ok === false) throw error || new Error(data?.message || "No se pudo cambiar la contraseña");
+      return true;
+    }
     function buildMatches() {
       return [...baseMatches, ...state.customMatches].sort((a, b) => a.date.localeCompare(b.date) || a.round - b.round || a.id.localeCompare(b.id));
     }
@@ -639,6 +652,19 @@
     function formatDate(iso) {
       const [y, m, d] = iso.split("-");
       return `${d}/${m}/${y}`;
+    }
+    function formatDayDate(iso) {
+      const [y, m, d] = iso.split("-");
+      const date = new Date(`${iso}T12:00:00`);
+      const day = new Intl.DateTimeFormat("es-CO", { weekday: "long" }).format(date);
+      return `${day} ${d}/${m}/${y}`;
+    }
+    function roundLabel(round) {
+      if (round === "all") return "Todas";
+      const dates = [...new Set(matches.filter(match => String(match.round) === String(round)).map(match => match.date))].sort();
+      if (!dates.length) return `Jornada ${round}`;
+      const dateText = dates.length === 1 ? formatDayDate(dates[0]) : `${formatDayDate(dates[0])} - ${formatDayDate(dates[dates.length - 1])}`;
+      return `Jornada ${round} · ${dateText}`;
     }
     function escapeHtml(value) {
       return String(value).replace(/[&<>"']/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;" }[char]));
@@ -710,8 +736,8 @@
     }
     function filteredMatches(roundId, groupId, searchId) {
       const round = byId(roundId).value;
-      const group = byId(groupId).value;
-      const term = byId(searchId).value.trim().toLowerCase();
+      const group = groupId && byId(groupId) ? byId(groupId).value : "all";
+      const term = searchId && byId(searchId) ? byId(searchId).value.trim().toLowerCase() : "";
       return matches.filter(m => {
         const text = `${m.group} Jornada ${m.round} ${formatDate(m.date)} ${m.home} ${m.away}`.toLowerCase();
         return (round === "all" || String(m.round) === round) && (group === "all" || m.group === group) && (!term || text.includes(term));
@@ -729,7 +755,7 @@
       const list = byId("matchList");
       const targetUser = predictionTargetUser();
       const userPredictions = state.predictions[targetUser] || {};
-      const rows = filteredMatches("roundFilter", "groupFilter", "searchMatch");
+      const rows = filteredMatches("roundFilter");
       list.innerHTML = rows.length ? rows.map(match => {
         const locked = isLocked(match);
         const pred = userPredictions[match.id] || {};
@@ -859,6 +885,7 @@
       document.body.classList.toggle("not-admin", !session.admin);
       byId("loginBtn").classList.toggle("hidden", session.authenticated);
       byId("logoutBtn").classList.toggle("hidden", !session.authenticated);
+      byId("playerPasswordPanel").classList.toggle("hidden", !session.authenticated || session.admin);
       byId("userSelect").disabled = session.authenticated;
       byId("adminPass").disabled = session.authenticated;
       byId("statUsers").textContent = state.users.length;
@@ -877,15 +904,15 @@
       const previousAuditRound = byId("auditRound").value;
       const rounds = ["all", ...new Set(matches.map(m => String(m.round)))];
       const groups = ["all", ...Array.from(new Set(matches.map(m => m.group))).sort()];
-      const roundHtml = rounds.map(r => `<option value="${r}">${r === "all" ? "Todas" : `Jornada ${r}`}</option>`).join("");
-      const receptionRoundHtml = rounds.filter(r => r !== "all").map(r => `<option value="${r}">Jornada ${r}</option>`).join("");
+      const roundHtml = rounds.map(r => `<option value="${r}">${roundLabel(r)}</option>`).join("");
+      const receptionRoundHtml = rounds.filter(r => r !== "all").map(r => `<option value="${r}">${roundLabel(r)}</option>`).join("");
       const groupHtml = groups.map(g => `<option value="${g}">${g === "all" ? "Todos" : `Grupo ${g}`}</option>`).join("");
       ["roundFilter","adminRoundFilter"].forEach(id => byId(id).innerHTML = roundHtml);
       byId("receptionRound").innerHTML = receptionRoundHtml;
       if (rounds.includes(previousReceptionRound)) byId("receptionRound").value = previousReceptionRound;
       byId("auditRound").innerHTML = receptionRoundHtml;
       if (rounds.includes(previousAuditRound)) byId("auditRound").value = previousAuditRound;
-      ["groupFilter","adminGroupFilter"].forEach(id => byId(id).innerHTML = groupHtml);
+      byId("adminGroupFilter").innerHTML = groupHtml;
     }
     function fillUsers() {
       const html = state.users.map(u => `<option value="${u}">${u}</option>`).join("") + `<option value="Administrador">Administrador</option>`;
@@ -970,8 +997,24 @@
     byId("logoutBtn").addEventListener("click", () => {
       session = { user: null, admin: false, authenticated: false, password: "" };
       byId("adminPass").value = "";
+      byId("playerNewPassword").value = "";
       if (db) loadLoginOptions();
       renderAll();
+    });
+    byId("savePlayerPassword").addEventListener("click", async () => {
+      if (!session.authenticated || session.admin) return toast("Entra como jugador para cambiar tu contraseña");
+      const nextPassword = byId("playerNewPassword").value.trim();
+      if (!nextPassword) return toast("La nueva contraseña no puede quedar vacía");
+      try {
+        if (db) await changePlayerPasswordRemote(nextPassword);
+        state.passwords[session.user] = nextPassword;
+        session.password = nextPassword;
+        byId("playerNewPassword").value = "";
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        toast("Contraseña actualizada");
+      } catch (error) {
+        toast("No se pudo cambiar la contraseña");
+      }
     });
     byId("savePredictions").addEventListener("click", () => {
       if (!session.authenticated) return toast("Primero debes entrar con tu usuario");
@@ -1104,7 +1147,7 @@
       fillSelects();
       renderAll();
     });
-    ["roundFilter","groupFilter","searchMatch"].forEach(id => byId(id).addEventListener("input", renderMatches));
+    byId("roundFilter").addEventListener("input", renderMatches);
     byId("predictionUser").addEventListener("change", renderMatches);
     ["adminRoundFilter","adminGroupFilter","adminSearch"].forEach(id => byId(id).addEventListener("input", renderAdminMatches));
     byId("historyUser").addEventListener("change", renderHistory);

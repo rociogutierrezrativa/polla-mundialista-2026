@@ -39,6 +39,14 @@ Opcion simple:
 
 El administrador puede cambiar esas claves desde la app.
 
+## Cambio de contraseña de jugadores
+
+Para que los jugadores puedan cambiar su propia contraseña en Supabase, ejecuta una sola vez el archivo:
+
+`supabase-add-change-user-password.sql`
+
+Es un script aditivo: crea/actualiza una función RPC y no borra tablas ni reinicia datos.
+
 ## Cierre de recepcion por jornada
 
 En el modulo `Admin`, selecciona una jornada en `Cierre por jornada` y usa el interruptor `Recepcion abierta para esta jornada`.
