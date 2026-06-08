@@ -41,11 +41,7 @@ El administrador puede cambiar esas claves desde la app.
 
 ## Cambio de contraseña de jugadores
 
-Para que los jugadores puedan cambiar su propia contraseña en Supabase, ejecuta una sola vez el archivo:
-
-`supabase-add-change-user-password.sql`
-
-Es un script aditivo: crea/actualiza una función RPC y no borra tablas ni reinicia datos.
+El archivo `supabase-schema.sql` ya incluye la función `change_user_password`, que permite que cada jugador cambie su propia contraseña desde la app.
 
 ## Cierre de recepcion por jornada
 

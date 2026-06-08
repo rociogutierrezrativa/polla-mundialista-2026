@@ -467,7 +467,6 @@
               <label class="checkline"><input id="unlockPredictions" type="checkbox" /> Recepción abierta para esta jornada</label>
               <div class="toolbar">
                 <div class="field"><label for="adminRoundFilter">Jornada</label><select id="adminRoundFilter"></select></div>
-                <div class="field"><label for="adminGroupFilter">Grupo</label><select id="adminGroupFilter"></select></div>
                 <div class="field"><label for="adminSearch">Buscar</label><input id="adminSearch" placeholder="Equipo o fecha" /></div>
                 <button id="saveResults" class="blue" type="button">Guardar</button>
               </div>
@@ -782,7 +781,7 @@
     }
     function renderAdminMatches() {
       const list = byId("adminMatchList");
-      const rows = filteredMatches("adminRoundFilter", "adminGroupFilter", "adminSearch");
+      const rows = filteredMatches("adminRoundFilter", null, "adminSearch");
       list.innerHTML = rows.map(match => {
         const result = state.results[match.id] || {};
         return `<article class="match">
@@ -903,16 +902,13 @@
       const previousReceptionRound = byId("receptionRound").value;
       const previousAuditRound = byId("auditRound").value;
       const rounds = ["all", ...new Set(matches.map(m => String(m.round)))];
-      const groups = ["all", ...Array.from(new Set(matches.map(m => m.group))).sort()];
       const roundHtml = rounds.map(r => `<option value="${r}">${roundLabel(r)}</option>`).join("");
       const receptionRoundHtml = rounds.filter(r => r !== "all").map(r => `<option value="${r}">${roundLabel(r)}</option>`).join("");
-      const groupHtml = groups.map(g => `<option value="${g}">${g === "all" ? "Todos" : `Grupo ${g}`}</option>`).join("");
       ["roundFilter","adminRoundFilter"].forEach(id => byId(id).innerHTML = roundHtml);
       byId("receptionRound").innerHTML = receptionRoundHtml;
       if (rounds.includes(previousReceptionRound)) byId("receptionRound").value = previousReceptionRound;
       byId("auditRound").innerHTML = receptionRoundHtml;
       if (rounds.includes(previousAuditRound)) byId("auditRound").value = previousAuditRound;
-      byId("adminGroupFilter").innerHTML = groupHtml;
     }
     function fillUsers() {
       const html = state.users.map(u => `<option value="${u}">${u}</option>`).join("") + `<option value="Administrador">Administrador</option>`;
@@ -1149,7 +1145,7 @@
     });
     byId("roundFilter").addEventListener("input", renderMatches);
     byId("predictionUser").addEventListener("change", renderMatches);
-    ["adminRoundFilter","adminGroupFilter","adminSearch"].forEach(id => byId(id).addEventListener("input", renderAdminMatches));
+    ["adminRoundFilter","adminSearch"].forEach(id => byId(id).addEventListener("input", renderAdminMatches));
     byId("historyUser").addEventListener("change", renderHistory);
     ["auditRound","auditSearch"].forEach(id => byId(id).addEventListener("input", renderPredictionAudit));
     byId("downloadAudit").addEventListener("click", downloadAuditCsv);
