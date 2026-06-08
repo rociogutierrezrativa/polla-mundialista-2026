@@ -629,7 +629,11 @@
         p_current_password: session.password,
         p_new_password: newPassword
       });
-      if (error || data?.ok === false) throw error || new Error(data?.message || "No se pudo cambiar la contraseña");
+      if (error) {
+        const message = error.message || "No se pudo cambiar la contraseña";
+        throw new Error(message.includes("change_user_password") ? "Falta actualizar Supabase con la función change_user_password" : message);
+      }
+      if (data?.ok === false) throw new Error(data?.message || "No se pudo cambiar la contraseña");
       return true;
     }
     function buildMatches() {
@@ -1009,7 +1013,8 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         toast("Contraseña actualizada");
       } catch (error) {
-        toast("No se pudo cambiar la contraseña");
+        console.error(error);
+        toast(error.message || "No se pudo cambiar la contraseña");
       }
     });
     byId("savePredictions").addEventListener("click", () => {
