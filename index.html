@@ -70,6 +70,8 @@
     }
     body.locked main,
     body.locked nav,
+    body.must-change-password main,
+    body.must-change-password nav,
     body.not-admin [data-view="admin"],
     body.not-admin [data-view="audit"],
     body.not-admin #view-admin,
@@ -563,19 +565,25 @@
 
     let state = loadState();
     let matches = buildMatches();
-    let session = { user: null, admin: false, authenticated: false, password: "" };
+    let session = { user: null, admin: false, authenticated: false, password: "", mustChangePassword: false };
 
     function defaultPasswords(users) {
       return Object.fromEntries(users.map(user => [user, DEFAULT_PLAYER_PASSWORD]));
+    }
+    function defaultPasswordChanged(users) {
+      return Object.fromEntries(users.map(user => [user, false]));
     }
     function normalizeState(raw) {
       const base = raw || {};
       const users = Array.isArray(base.users) && base.users.length ? base.users : defaultUsers;
       const passwords = { ...defaultPasswords(users), ...(base.passwords || {}) };
       users.forEach(user => { passwords[user] ||= DEFAULT_PLAYER_PASSWORD; });
+      const passwordChanged = { ...defaultPasswordChanged(users), ...(base.passwordChanged || {}) };
+      users.forEach(user => { passwordChanged[user] = !!passwordChanged[user]; });
       return {
         users,
         passwords,
+        passwordChanged,
         adminPassword: base.adminPassword || DEFAULT_ADMIN_PASSWORD,
         settings: { predictionsReceptionOpen: true, predictionsUnlocked: false, roundReception: {}, ...(base.settings || {}) },
         customMatches: Array.isArray(base.customMatches) ? base.customMatches : [],
@@ -801,8 +809,8 @@
     }
     function renderStandings() {
       byId("standingsTable").innerHTML = `
-        <thead><tr><th>Puesto</th><th>Participante</th><th class="right">Puntos</th><th class="right">Exactos</th><th class="right">Resultados</th><th class="right">Partidos cerrados</th></tr></thead>
-        <tbody>${standings().map(r => `<tr><td><b>${r.rank}</b></td><td>${r.user}</td><td class="right"><b>${r.pts}</b></td><td class="right">${r.exact}</td><td class="right">${r.result}</td><td class="right">${r.played}</td></tr>`).join("")}</tbody>`;
+        <thead><tr><th>Participante</th><th class="right">Puntos</th><th class="right">Exactos</th><th class="right">Resultados</th><th class="right">Partidos cerrados</th></tr></thead>
+        <tbody>${standings().map(r => `<tr><td>${r.user}</td><td class="right"><b>${r.pts}</b></td><td class="right">${r.exact}</td><td class="right">${r.result}</td><td class="right">${r.played}</td></tr>`).join("")}</tbody>`;
     }
     function renderHistory() {
       const user = byId("historyUser").value || session.user;
@@ -885,6 +893,7 @@
     }
     function renderStats() {
       document.body.classList.toggle("locked", !session.authenticated);
+      document.body.classList.toggle("must-change-password", session.authenticated && session.mustChangePassword);
       document.body.classList.toggle("not-admin", !session.admin);
       byId("loginBtn").classList.toggle("hidden", session.authenticated);
       byId("logoutBtn").classList.toggle("hidden", !session.authenticated);
@@ -894,7 +903,7 @@
       byId("statUsers").textContent = state.users.length;
       byId("statMatches").textContent = matches.length;
       byId("statDone").textContent = Object.keys(state.results).length;
-      byId("roleLine").textContent = session.authenticated ? (session.admin ? `Admin activo · ${session.user}` : `Jugador · ${session.user}`) : "Selecciona tu usuario para continuar.";
+      byId("roleLine").textContent = session.authenticated ? (session.admin ? `Admin activo · ${session.user}` : (session.mustChangePassword ? `Jugador · ${session.user} · cambia tu contraseña para continuar` : `Jugador · ${session.user}`)) : "Selecciona tu usuario para continuar.";
       const selectedRound = byId("receptionRound").value || String(matches[0]?.round || 1);
       const selectedRoundOpen = isRoundReceptionOpen(selectedRound);
       byId("adminState").textContent = session.admin ? `Admin activo · Jornada ${selectedRound} ${selectedRoundOpen ? "abierta" : "cerrada"}` : "Solo lectura";
@@ -932,7 +941,7 @@
     function renderAll() {
       fillUsers();
       renderStats();
-      if (!session.authenticated) return;
+      if (!session.authenticated || session.mustChangePassword) return;
       renderMatches();
       renderAdminMatches();
       renderStandings();
@@ -968,18 +977,18 @@
           matches = buildMatches();
           fillSelects();
         } catch (error) {
-          session = { user: null, admin: false, authenticated: false, password: "" };
+          session = { user: null, admin: false, authenticated: false, password: "", mustChangePassword: false };
           renderAll();
           return toast(selected === "Administrador" ? "Clave admin incorrecta" : "Contraseña incorrecta");
         }
       } else {
         if (selected === "Administrador" && password !== state.adminPassword) {
-          session = { user: null, admin: false, authenticated: false, password: "" };
+          session = { user: null, admin: false, authenticated: false, password: "", mustChangePassword: false };
           renderAll();
           return toast("Clave admin incorrecta");
         }
         if (selected !== "Administrador" && password !== state.passwords[selected]) {
-          session = { user: null, admin: false, authenticated: false, password: "" };
+          session = { user: null, admin: false, authenticated: false, password: "", mustChangePassword: false };
           renderAll();
           return toast("Contraseña incorrecta");
         }
@@ -988,6 +997,7 @@
       session.admin = selected === "Administrador";
       session.authenticated = true;
       session.password = password;
+      session.mustChangePassword = !session.admin && !state.passwordChanged[selected];
       document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
       document.querySelector('[data-view="predictions"]').classList.add("active");
       document.querySelectorAll("main > section").forEach(s => s.classList.add("hidden"));
@@ -995,7 +1005,7 @@
       renderAll();
     });
     byId("logoutBtn").addEventListener("click", () => {
-      session = { user: null, admin: false, authenticated: false, password: "" };
+      session = { user: null, admin: false, authenticated: false, password: "", mustChangePassword: false };
       byId("adminPass").value = "";
       byId("playerNewPassword").value = "";
       if (db) loadLoginOptions();
@@ -1008,9 +1018,12 @@
       try {
         if (db) await changePlayerPasswordRemote(nextPassword);
         state.passwords[session.user] = nextPassword;
+        state.passwordChanged[session.user] = true;
         session.password = nextPassword;
+        session.mustChangePassword = false;
         byId("playerNewPassword").value = "";
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        renderAll();
         toast("Contraseña actualizada");
       } catch (error) {
         console.error(error);
@@ -1058,6 +1071,7 @@
       if (!name || state.users.includes(name)) return toast("Nombre inválido o repetido");
       state.users.push(name);
       state.passwords[name] = byId("newUserPassword").value.trim() || DEFAULT_PLAYER_PASSWORD;
+      state.passwordChanged[name] = false;
       byId("newUser").value = "";
       byId("newUserPassword").value = "";
       persist();
@@ -1109,6 +1123,7 @@
         const nextPassword = input.value.trim();
         if (!nextPassword) return toast("La contraseña no puede quedar vacía");
         state.passwords[passwordUser] = nextPassword;
+        state.passwordChanged[passwordUser] = false;
         persist();
         renderAll();
         return toast(`Clave actualizada para ${passwordUser}`);
@@ -1117,6 +1132,7 @@
       state.users = state.users.filter(u => u !== user);
       delete state.predictions[user];
       delete state.passwords[user];
+      delete state.passwordChanged[user];
       if (session.user === user) session.user = state.users[0] || "Jugador 01";
       persist();
       renderAll();
@@ -1144,7 +1160,7 @@
           return toast("No se pudo reiniciar Supabase");
         }
       }
-      session = { user: null, admin: false, authenticated: false, password: "" };
+      session = { user: null, admin: false, authenticated: false, password: "", mustChangePassword: false };
       fillSelects();
       renderAll();
     });
