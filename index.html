@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
@@ -68,6 +68,7 @@
       border-radius: 10px;
       box-shadow: var(--shadow);
     }
+    body.locked #sessionPanel > summary { display: none; }
     body.locked main,
     body.locked nav,
     body.not-admin [data-view="admin"],
@@ -341,6 +342,15 @@
     }
     .checkline input { width: auto; min-height: auto; }
     .hidden { display: none !important; }
+    .password-toggle { margin-top: 10px; }
+    .password-toggle summary { cursor: pointer; padding: 10px 0; font-weight: 800; color: var(--green); }
+    .password-toggle label { margin-top: 6px; }
+    .session-toggle summary { cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 800; list-style: none; }
+    .session-toggle summary::-webkit-details-marker { display: none; }
+    .session-toggle summary::after { content: "▾"; font-size: 14px; opacity: .8; transition: transform .2s ease; }
+    .session-toggle[open] summary::after { transform: rotate(180deg); }
+    .session-toggle summary small { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.72); text-align: right; }
+    .session-body { margin-top: 12px; }
     .toast {
       position: fixed;
       right: 18px;
@@ -382,26 +392,30 @@
       <div class="brand"><div class="ball" aria-label="Logo Mundial 2026">
         <img src="./world-cup-2026-logo.png" alt="Logo Mundial 2026" />
       </div><div>Polla Mundialista 2026</div></div>
-      <div class="session">
+      <details id="sessionPanel" class="session session-toggle">
+        <summary><span>Usuario / sesión</span><small id="sessionSummary">Toca para entrar</small></summary>
+        <div class="session-body">
         <label for="userSelect">Usuario</label>
         <select id="userSelect"></select>
-        <label for="adminPass">ContraseÃ±a</label>
-        <input id="adminPass" type="password" placeholder="ContraseÃ±a del usuario" />
+        <label for="adminPass">Contraseña</label>
+        <input id="adminPass" type="password" placeholder="Contraseña del usuario" />
         <button id="loginBtn" class="primary" type="button">Entrar</button>
-        <button id="logoutBtn" type="button" class="hidden" style="width:100%; margin-top:8px">Cerrar sesiÃ³n</button>
-        <div id="playerPasswordPanel" class="hidden">
-          <label for="playerNewPassword">Nueva contraseÃ±a</label>
-          <input id="playerNewPassword" type="password" placeholder="Nueva contraseÃ±a" />
-          <button id="savePlayerPassword" class="primary" type="button" style="width:100%">Cambiar contraseÃ±a</button>
-        </div>
+        <button id="logoutBtn" type="button" class="hidden" style="width:100%; margin-top:8px">Cerrar sesión</button>
+        <details id="playerPasswordPanel" class="password-toggle hidden">
+          <summary>Cambiar contraseña</summary>
+          <label for="playerNewPassword">Nueva contraseña</label>
+          <input id="playerNewPassword" type="password" placeholder="Nueva contraseña" />
+          <button id="savePlayerPassword" class="primary" type="button" style="width:100%">Guardar nueva contraseña</button>
+        </details>
         <p class="role-line" id="roleLine"></p>
-      </div>
+        </div>
+      </details>
       <nav>
-        <button class="nav-btn active" type="button" data-view="predictions">ðŸ“ Predicciones</button>
-        <button class="nav-btn" type="button" data-view="standings">ðŸ† Tabla</button>
-        <button class="nav-btn" type="button" data-view="history">ðŸ“‹ Historial</button>
-        <button class="nav-btn" type="button" data-view="audit">ðŸ” Predicciones por jornada</button>
-        <button class="nav-btn" type="button" data-view="admin">ðŸ› ï¸ Admin</button>
+        <button class="nav-btn active" type="button" data-view="predictions">Predicciones</button>
+        <button class="nav-btn" type="button" data-view="standings">Tabla</button>
+        <button class="nav-btn" type="button" data-view="history">Historial</button>
+        <button class="nav-btn" type="button" data-view="audit">Predicciones por jornada</button>
+        <button class="nav-btn" type="button" data-view="admin">Admin</button>
       </nav>
     </aside>
 
@@ -409,7 +423,7 @@
       <div class="topbar">
         <div>
           <h1>Polla Mundialista 2026</h1>
-          <p>Predicciones por jornada, resultados oficiales y ranking automÃ¡tico.</p>
+          <p>Predicciones por jornada, resultados oficiales y ranking automático.</p>
         </div>
         <div class="status-grid">
           <div class="stat"><b id="statUsers">0</b><span>Participantes</span></div>
@@ -439,7 +453,7 @@
         <div class="panel">
           <div class="panel-head">
             <h2>Tabla de posiciones</h2>
-            <span class="badge result">Exacto 3 pts Â· Resultado 1 pt</span>
+            <span class="badge result">Exacto 3 pts - Resultado 1 pt</span>
           </div>
           <div class="table-wrap"><table id="standingsTable"></table></div>
         </div>
@@ -464,7 +478,7 @@
             </div>
             <div class="panel-body">
               <div class="field" style="margin-bottom:10px"><label for="receptionRound">Cierre por jornada</label><select id="receptionRound"></select></div>
-              <label class="checkline"><input id="unlockPredictions" type="checkbox" /> RecepciÃ³n abierta para esta jornada</label>
+              <label class="checkline"><input id="unlockPredictions" type="checkbox" /> Recepción abierta para esta jornada</label>
               <div class="toolbar">
                 <div class="field"><label for="adminRoundFilter">Jornada</label><select id="adminRoundFilter"></select></div>
                 <div class="field"><label for="adminSearch">Buscar</label><input id="adminSearch" placeholder="Equipo o fecha" /></div>
@@ -477,9 +491,9 @@
             <div class="panel-head"><h2>Participantes</h2></div>
             <div class="panel-body">
               <div class="field"><label for="newUser">Nuevo usuario</label><input id="newUser" placeholder="Nombre del participante" /></div>
-              <div class="field" style="margin-top:8px"><label for="newUserPassword">ContraseÃ±a inicial</label><input id="newUserPassword" placeholder="jugador2026" /></div>
+              <div class="field" style="margin-top:8px"><label for="newUserPassword">Contraseña inicial</label><input id="newUserPassword" placeholder="jugador2026" /></div>
               <button id="addUser" class="primary" type="button" style="width:100%; margin:10px 0 14px">Agregar</button>
-              <div class="field" style="margin-bottom:10px"><label for="adminPasswordEdit">ContraseÃ±a administrador</label><input id="adminPasswordEdit" placeholder="admin2026" /></div>
+              <div class="field" style="margin-bottom:10px"><label for="adminPasswordEdit">Contraseña administrador</label><input id="adminPasswordEdit" placeholder="admin2026" /></div>
               <button id="saveAdminPassword" class="blue" type="button" style="width:100%; margin-bottom:14px">Guardar clave admin</button>
               <div id="peopleList" class="people-list"></div>
               <button id="resetDemo" class="danger" type="button" style="width:100%; margin-top:14px">Reiniciar datos</button>
@@ -535,7 +549,7 @@
       "Estados Unidos":"us","Paraguay":"py","Catar":"qa","Suiza":"ch","Brasil":"br","Marruecos":"ma",
       "Haiti":"ht","Escocia":"gb-sct","Australia":"au","Turquia":"tr","Alemania":"de","Curazao":"cw",
       "Paises Bajos":"nl","Japon":"jp","Costa de Marfil":"ci","Ecuador":"ec","Suecia":"se","Tunez":"tn",
-      "EspaÃ±a":"es","Cabo Verde":"cv","Belgica":"be","Egipto":"eg","Arabia Saudita":"sa","Uruguay":"uy",
+      "España":"es","Cabo Verde":"cv","Belgica":"be","Egipto":"eg","Arabia Saudita":"sa","Uruguay":"uy",
       "Iran":"ir","Nueva Zelanda":"nz","Francia":"fr","Senegal":"sn","Irak":"iq","Noruega":"no",
       "Argentina":"ar","Argelia":"dz","Austria":"at","Jordania":"jo","Portugal":"pt","Rep. de Congo":"cg",
       "Rep. del Congo":"cg","Inglaterra":"gb-eng","Croacia":"hr","Ghana":"gh","Panama":"pa",
@@ -546,18 +560,18 @@
       ["B",2,"2026-06-12","Canada","Bosnia"],["D",2,"2026-06-12","Estados Unidos","Paraguay"],
       ["B",3,"2026-06-13","Catar","Suiza"],["C",3,"2026-06-13","Brasil","Marruecos"],["C",3,"2026-06-13","Haiti","Escocia"],["D",3,"2026-06-13","Australia","Turquia"],
       ["E",4,"2026-06-14","Alemania","Curazao"],["F",4,"2026-06-14","Paises Bajos","Japon"],["E",4,"2026-06-14","Costa de Marfil","Ecuador"],["F",4,"2026-06-14","Suecia","Tunez"],
-      ["H",5,"2026-06-15","EspaÃ±a","Cabo Verde"],["G",5,"2026-06-15","Belgica","Egipto"],["H",5,"2026-06-15","Arabia Saudita","Uruguay"],["G",5,"2026-06-15","Iran","Nueva Zelanda"],
+      ["H",5,"2026-06-15","España","Cabo Verde"],["G",5,"2026-06-15","Belgica","Egipto"],["H",5,"2026-06-15","Arabia Saudita","Uruguay"],["G",5,"2026-06-15","Iran","Nueva Zelanda"],
       ["I",6,"2026-06-16","Francia","Senegal"],["I",6,"2026-06-16","Irak","Noruega"],["J",6,"2026-06-16","Argentina","Argelia"],["J",6,"2026-06-16","Austria","Jordania"],
       ["K",7,"2026-06-17","Portugal","Rep. de Congo"],["L",7,"2026-06-17","Inglaterra","Croacia"],["L",7,"2026-06-17","Ghana","Panama"],["K",7,"2026-06-17","Uzbekistan","Colombia"],
       ["A",8,"2026-06-18","Rep. Checa","Sudafrica"],["B",8,"2026-06-18","Suiza","Bosnia"],["B",8,"2026-06-18","Canada","Catar"],["A",8,"2026-06-18","Mexico","Corea del Sur"],
       ["D",9,"2026-06-19","Estados Unidos","Australia"],["C",9,"2026-06-19","Escocia","Marruecos"],["C",9,"2026-06-19","Brasil","Haiti"],["D",9,"2026-06-19","Turquia","Paraguay"],
       ["F",10,"2026-06-20","Paises Bajos","Suecia"],["E",10,"2026-06-20","Alemania","Costa de Marfil"],["E",10,"2026-06-20","Ecuador","Curazao"],["F",10,"2026-06-20","Tunez","Japon"],
-      ["H",11,"2026-06-21","EspaÃ±a","Arabia Saudita"],["G",11,"2026-06-21","Belgica","Iran"],["H",11,"2026-06-21","Uruguay","Cabo Verde"],["G",11,"2026-06-21","Nueva Zelanda","Egipto"],
+      ["H",11,"2026-06-21","España","Arabia Saudita"],["G",11,"2026-06-21","Belgica","Iran"],["H",11,"2026-06-21","Uruguay","Cabo Verde"],["G",11,"2026-06-21","Nueva Zelanda","Egipto"],
       ["J",12,"2026-06-22","Argentina","Austria"],["I",12,"2026-06-22","Francia","Irak"],["I",12,"2026-06-22","Noruega","Senegal"],["J",12,"2026-06-22","Jordania","Argelia"],
       ["K",12,"2026-06-23","Portugal","Uzbekistan"],["L",12,"2026-06-23","Inglaterra","Ghana"],["L",12,"2026-06-23","Panama","Croacia"],["K",12,"2026-06-23","Colombia","Rep. de Congo"],
       ["B",13,"2026-06-24","Suiza","Canada"],["B",13,"2026-06-24","Bosnia","Catar"],["C",13,"2026-06-24","Marruecos","Haiti"],["C",13,"2026-06-24","Escocia","Brasil"],["A",13,"2026-06-24","Sudafrica","Corea del Sur"],["A",13,"2026-06-24","Rep. Checa","Mexico"],
       ["E",14,"2026-06-25","Curazao","Costa de Marfil"],["E",14,"2026-06-25","Ecuador","Alemania"],["F",14,"2026-06-25","Tunez","Paises Bajos"],["F",14,"2026-06-25","Japon","Suecia"],["D",14,"2026-06-25","Turquia","Estados Unidos"],["D",14,"2026-06-25","Paraguay","Australia"],
-      ["I",15,"2026-06-26","Noruega","Francia"],["I",15,"2026-06-26","Senegal","Irak"],["H",15,"2026-06-26","Cabo Verde","Arabia Saudita"],["H",15,"2026-06-26","Uruguay","EspaÃ±a"],["G",15,"2026-06-26","Nueva Zelanda","Belgica"],["G",15,"2026-06-26","Egipto","Iran"],
+      ["I",15,"2026-06-26","Noruega","Francia"],["I",15,"2026-06-26","Senegal","Irak"],["H",15,"2026-06-26","Cabo Verde","Arabia Saudita"],["H",15,"2026-06-26","Uruguay","España"],["G",15,"2026-06-26","Nueva Zelanda","Belgica"],["G",15,"2026-06-26","Egipto","Iran"],
       ["L",16,"2026-06-27","Panama","Inglaterra"],["L",16,"2026-06-27","Croacia","Ghana"],["K",16,"2026-06-27","Colombia","Portugal"],["K",16,"2026-06-27","Rep. del Congo","Uzbekistan"],["J",16,"2026-06-27","Argelia","Austria"],["J",16,"2026-06-27","Jordania","Argentina"]
     ].map((m, i) => ({ id: `m${i + 1}`, group: m[0], round: m[1], date: m[2], home: m[3], away: m[4], custom: false }));
 
@@ -630,10 +644,10 @@
         p_new_password: newPassword
       });
       if (error) {
-        const message = error.message || "No se pudo cambiar la contraseÃ±a";
-        throw new Error(message.includes("change_user_password") ? "Falta actualizar Supabase con la funciÃ³n change_user_password" : message);
+        const message = error.message || "No se pudo cambiar la contraseña";
+        throw new Error(message.includes("change_user_password") ? "Falta actualizar Supabase con la función change_user_password" : message);
       }
-      if (data?.ok === false) throw new Error(data?.message || "No se pudo cambiar la contraseÃ±a");
+      if (data?.ok === false) throw new Error(data?.message || "No se pudo cambiar la contraseña");
       return true;
     }
     function buildMatches() {
@@ -667,7 +681,7 @@
       const dates = [...new Set(matches.filter(match => String(match.round) === String(round)).map(match => match.date))].sort();
       if (!dates.length) return `Jornada ${round}`;
       const dateText = dates.length === 1 ? formatDayDate(dates[0]) : `${formatDayDate(dates[0])} - ${formatDayDate(dates[dates.length - 1])}`;
-      return `Jornada ${round} Â· ${dateText}`;
+      return `Jornada ${round} - ${dateText}`;
     }
     function escapeHtml(value) {
       return String(value).replace(/[&<>"']/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;" }[char]));
@@ -766,19 +780,19 @@
         const hasPrediction = hasCompleteScore(pred);
         const hasResult = hasCompleteScore(result);
         const inputLocked = !session.admin && (locked || hasPrediction || hasResult);
-        const statusText = hasResult ? "Marcador final cargado" : hasPrediction ? "PredicciÃ³n guardada" : locked ? "RecepciÃ³n cerrada" : "Abierto";
+        const statusText = hasResult ? "Marcador final cargado" : hasPrediction ? "Predicción guardada" : locked ? "Recepción cerrada" : "Abierto";
         const statusClass = hasResult || hasPrediction || locked ? "locked" : "open";
         const pts = pointsFor(targetUser, match);
         return `<article class="match">
           <div class="teams">
-            <div class="meta">Grupo ${match.group} Â· Jornada ${match.round} Â· ${formatDate(match.date)}</div>
+            <div class="meta">Grupo ${match.group} - Jornada ${match.round} - ${formatDate(match.date)}</div>
             <div class="team">${countryLabel(match.home)}</div>
             <div class="team">${countryLabel(match.away)}</div>
           </div>
           ${scoreBlock(match, pred, inputLocked, "pred")}
           <div>
             <span class="badge ${session.admin ? "result" : statusClass}">${session.admin && (hasResult || hasPrediction || locked) ? "Admin editable" : statusText}</span>
-            <div class="meta" style="margin-top:6px">${result ? `Final: ${result.home}-${result.away} Â· ${pts} pts` : "Sin resultado"}</div>
+            <div class="meta" style="margin-top:6px">${result ? `Final: ${result.home}-${result.away} - ${pts} pts` : "Sin resultado"}</div>
           </div>
         </article>`;
       }).join("") : `<div class="empty">No hay partidos con esos filtros.</div>`;
@@ -790,7 +804,7 @@
         const result = state.results[match.id] || {};
         return `<article class="match">
           <div class="teams">
-            <div class="meta">Grupo ${match.group} Â· Jornada ${match.round} Â· ${formatDate(match.date)}</div>
+            <div class="meta">Grupo ${match.group} - Jornada ${match.round} - ${formatDate(match.date)}</div>
             <div class="team">${countryLabel(match.home)}</div>
             <div class="team">${countryLabel(match.away)}</div>
           </div>
@@ -807,14 +821,14 @@
     function renderHistory() {
       const user = byId("historyUser").value || session.user;
       byId("historyTable").innerHTML = `
-        <thead><tr><th>Fecha</th><th>Partido</th><th>PredicciÃ³n</th><th>Final</th><th class="right">Puntos</th></tr></thead>
+        <thead><tr><th>Fecha</th><th>Partido</th><th>Predicción</th><th>Final</th><th class="right">Puntos</th></tr></thead>
         <tbody>${matches.map(match => {
           const pred = state.predictions[user]?.[match.id];
           const res = state.results[match.id];
           return `<tr>
             <td>${formatDate(match.date)}</td>
             <td>${countryInline(match.home)} vs ${countryInline(match.away)}</td>
-            <td>${pred ? `${pred.home}-${pred.away}` : "Sin predicciÃ³n"}</td>
+            <td>${pred ? `${pred.home}-${pred.away}` : "Sin predicción"}</td>
             <td>${res ? `${res.home}-${res.away}` : "Pendiente"}</td>
             <td class="right"><b>${pointsFor(user, match)}</b></td>
           </tr>`;
@@ -838,7 +852,7 @@
       const rows = users.map(user => {
         const cells = roundMatches.map(match => {
           const pred = state.predictions[user]?.[match.id];
-          const value = hasCompleteScore(pred) ? `${pred.home}-${pred.away}` : `<span class="missing">Sin predicciÃ³n</span>`;
+          const value = hasCompleteScore(pred) ? `${pred.home}-${pred.away}` : `<span class="missing">Sin predicción</span>`;
           return `<td class="right">${value}</td>`;
         }).join("");
         return `<tr><td><b>${escapeHtml(user)}</b></td>${cells}</tr>`;
@@ -879,7 +893,7 @@
     function renderCustomMatches() {
       byId("customMatchList").innerHTML = state.customMatches.length ? state.customMatches.map(match => `<div class="person">
         <b>${countryInline(match.home)} vs ${countryInline(match.away)}</b>
-        <span class="meta">Grupo ${match.group} Â· Jornada ${match.round} Â· ${formatDate(match.date)}</span>
+        <span class="meta">Grupo ${match.group} - Jornada ${match.round} - ${formatDate(match.date)}</span>
         <button data-remove-match="${match.id}" type="button" ${session.admin ? "" : "disabled"}>Eliminar</button>
       </div>`).join("") : `<div class="empty" style="padding:18px">No hay partidos agregados.</div>`;
     }
@@ -894,10 +908,12 @@
       byId("statUsers").textContent = state.users.length;
       byId("statMatches").textContent = matches.length;
       byId("statDone").textContent = Object.keys(state.results).length;
-      byId("roleLine").textContent = session.authenticated ? (session.admin ? `Admin activo Â· ${session.user}` : `Jugador Â· ${session.user}`) : "Selecciona tu usuario para continuar.";
+      byId("roleLine").textContent = session.authenticated ? (session.admin ? `Admin activo - ${session.user}` : `Jugador - ${session.user}`) : "Selecciona tu usuario para continuar.";
+      byId("sessionSummary").textContent = session.authenticated ? (session.admin ? "Admin activo" : session.user) : "";
+      byId("sessionPanel").open = !session.authenticated ? true : byId("sessionPanel").open;
       const selectedRound = byId("receptionRound").value || String(matches[0]?.round || 1);
       const selectedRoundOpen = isRoundReceptionOpen(selectedRound);
-      byId("adminState").textContent = session.admin ? `Admin activo Â· Jornada ${selectedRound} ${selectedRoundOpen ? "abierta" : "cerrada"}` : "Solo lectura";
+      byId("adminState").textContent = session.admin ? `Admin activo - Jornada ${selectedRound} ${selectedRoundOpen ? "abierta" : "cerrada"}` : "Solo lectura";
       byId("predictionUserWrap").classList.toggle("hidden", !session.admin);
       byId("unlockPredictions").checked = selectedRoundOpen;
       byId("adminPasswordEdit").value = state.adminPassword || DEFAULT_ADMIN_PASSWORD;
@@ -915,7 +931,7 @@
       if (rounds.includes(previousAuditRound)) byId("auditRound").value = previousAuditRound;
     }
     function fillUsers() {
-      const html = state.users.map(u => `<option value="${u}">${u}</option>`).join("") + `<option value="Administrador">Administrador</option>`;
+      const html = `<option value="">Selecciona usuario</option>` + state.users.map(u => `<option value="${u}">${u}</option>`).join("") + `<option value="Administrador">Administrador</option>`;
       const previousPredictionUser = byId("predictionUser").value;
       byId("userSelect").innerHTML = html;
       byId("predictionUser").innerHTML = state.users.map(u => `<option value="${u}">${u}</option>`).join("");
@@ -952,7 +968,7 @@
 
     document.querySelectorAll(".nav-btn").forEach(btn => btn.addEventListener("click", () => {
       if (!session.authenticated) return toast("Primero debes entrar con tu usuario");
-      if ((btn.dataset.view === "admin" || btn.dataset.view === "audit") && !session.admin) return toast("El mÃ³dulo admin requiere clave");
+      if ((btn.dataset.view === "admin" || btn.dataset.view === "audit") && !session.admin) return toast("El módulo admin requiere clave");
       document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       document.querySelectorAll("main > section").forEach(s => s.classList.add("hidden"));
@@ -962,6 +978,7 @@
     byId("loginBtn").addEventListener("click", async () => {
       const selected = byId("userSelect").value;
       const password = byId("adminPass").value;
+      if (!selected) return toast("Selecciona un usuario");
       if (db) {
         try {
           state = await loginRemote(selected, password);
@@ -970,7 +987,7 @@
         } catch (error) {
           session = { user: null, admin: false, authenticated: false, password: "" };
           renderAll();
-          return toast(selected === "Administrador" ? "Clave admin incorrecta" : "ContraseÃ±a incorrecta");
+          return toast(selected === "Administrador" ? "Clave admin incorrecta" : "Contraseña incorrecta");
         }
       } else {
         if (selected === "Administrador" && password !== state.adminPassword) {
@@ -981,13 +998,14 @@
         if (selected !== "Administrador" && password !== state.passwords[selected]) {
           session = { user: null, admin: false, authenticated: false, password: "" };
           renderAll();
-          return toast("ContraseÃ±a incorrecta");
+          return toast("Contraseña incorrecta");
         }
       }
       session.user = selected === "Administrador" ? state.users[0] : selected;
       session.admin = selected === "Administrador";
       session.authenticated = true;
       session.password = password;
+      byId("sessionPanel").open = false;
       document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
       document.querySelector('[data-view="predictions"]').classList.add("active");
       document.querySelectorAll("main > section").forEach(s => s.classList.add("hidden"));
@@ -998,23 +1016,24 @@
       session = { user: null, admin: false, authenticated: false, password: "" };
       byId("adminPass").value = "";
       byId("playerNewPassword").value = "";
+      byId("sessionPanel").open = true;
       if (db) loadLoginOptions();
       renderAll();
     });
     byId("savePlayerPassword").addEventListener("click", async () => {
-      if (!session.authenticated || session.admin) return toast("Entra como jugador para cambiar tu contraseÃ±a");
+      if (!session.authenticated || session.admin) return toast("Entra como jugador para cambiar tu contraseña");
       const nextPassword = byId("playerNewPassword").value.trim();
-      if (!nextPassword) return toast("La nueva contraseÃ±a no puede quedar vacÃ­a");
+      if (!nextPassword) return toast("La nueva contraseña no puede quedar vacía");
       try {
         if (db) await changePlayerPasswordRemote(nextPassword);
         state.passwords[session.user] = nextPassword;
         session.password = nextPassword;
         byId("playerNewPassword").value = "";
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        toast("ContraseÃ±a actualizada");
+        toast("Contraseña actualizada");
       } catch (error) {
         console.error(error);
-        toast(error.message || "No se pudo cambiar la contraseÃ±a");
+        toast(error.message || "No se pudo cambiar la contraseña");
       }
     });
     byId("savePredictions").addEventListener("click", () => {
@@ -1055,7 +1074,7 @@
     byId("addUser").addEventListener("click", () => {
       if (!session.admin) return toast("Debes entrar como administrador");
       const name = byId("newUser").value.trim();
-      if (!name || state.users.includes(name)) return toast("Nombre invÃ¡lido o repetido");
+      if (!name || state.users.includes(name)) return toast("Nombre inválido o repetido");
       state.users.push(name);
       state.passwords[name] = byId("newUserPassword").value.trim() || DEFAULT_PLAYER_PASSWORD;
       byId("newUser").value = "";
@@ -1066,7 +1085,7 @@
     byId("saveAdminPassword").addEventListener("click", () => {
       if (!session.admin) return toast("Debes entrar como administrador");
       const nextPassword = byId("adminPasswordEdit").value.trim();
-      if (!nextPassword) return toast("La clave admin no puede quedar vacÃ­a");
+      if (!nextPassword) return toast("La clave admin no puede quedar vacía");
       state.adminPassword = nextPassword;
       persist();
       renderAll();
@@ -1107,7 +1126,7 @@
       if (passwordUser && session.admin) {
         const input = document.querySelector(`[data-password-user="${passwordUser}"]`);
         const nextPassword = input.value.trim();
-        if (!nextPassword) return toast("La contraseÃ±a no puede quedar vacÃ­a");
+        if (!nextPassword) return toast("La contraseña no puede quedar vacía");
         state.passwords[passwordUser] = nextPassword;
         persist();
         renderAll();
