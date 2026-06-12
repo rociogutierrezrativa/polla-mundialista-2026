@@ -423,7 +423,7 @@
       <div class="topbar">
         <div>
           <h1>Polla Mundialista 2026</h1>
-          <p>Predicciones por jornada, resultados oficiales y ranking automático.</p>
+          <p>Predicciones por jornada, resultados oficiales y posiciones.....</p>
         </div>
         <div class="status-grid">
           <div class="stat"><b id="statUsers">0</b><span>Participantes</span></div>
@@ -908,7 +908,7 @@
       byId("statUsers").textContent = state.users.length;
       byId("statMatches").textContent = matches.length;
       byId("statDone").textContent = Object.keys(state.results).length;
-      byId("roleLine").textContent = session.authenticated ? (session.admin ? `Admin activo - ${session.user}` : `Jugador - ${session.user}`) : "Selecciona tu usuario para continuar.";
+      byId("roleLine").textContent = session.authenticated ? (session.admin ? "Admin activo" : `Jugador - ${session.user}`) : "";
       byId("sessionSummary").textContent = session.authenticated ? (session.admin ? "Admin activo" : session.user) : "";
       byId("sessionPanel").open = !session.authenticated ? true : byId("sessionPanel").open;
       const selectedRound = byId("receptionRound").value || String(matches[0]?.round || 1);
@@ -1001,7 +1001,7 @@
           return toast("Contraseña incorrecta");
         }
       }
-      session.user = selected === "Administrador" ? state.users[0] : selected;
+      session.user = selected;
       session.admin = selected === "Administrador";
       session.authenticated = true;
       session.password = password;
