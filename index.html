@@ -496,7 +496,7 @@
               <div class="field" style="margin-bottom:10px"><label for="adminPasswordEdit">Contraseña administrador</label><input id="adminPasswordEdit" placeholder="admin2026" /></div>
               <button id="saveAdminPassword" class="blue" type="button" style="width:100%; margin-bottom:14px">Guardar clave admin</button>
               <div id="peopleList" class="people-list"></div>
-              <button id="resetDemo" class="danger" type="button" style="width:100%; margin-top:14px">Reiniciar datos</button>
+              <button id="resetDemo" class="danger hidden" type="button" style="width:100%; margin-top:14px">Reiniciar datos</button>
             </div>
           </div>
           <div class="panel">
@@ -574,6 +574,7 @@
       ["I",16,"2026-06-26","Noruega","Francia"],["I",16,"2026-06-26","Senegal","Irak"],["H",16,"2026-06-26","Cabo Verde","Arabia Saudita"],["H",16,"2026-06-26","Uruguay","España"],["G",16,"2026-06-26","Nueva Zelanda","Belgica"],["G",16,"2026-06-26","Egipto","Iran"],
       ["L",17,"2026-06-27","Panama","Inglaterra"],["L",17,"2026-06-27","Croacia","Ghana"],["K",17,"2026-06-27","Colombia","Portugal"],["K",17,"2026-06-27","Rep. del Congo","Uzbekistan"],["J",17,"2026-06-27","Argelia","Austria"],["J",17,"2026-06-27","Jordania","Argentina"]
     ].map((m, i) => ({ id: `m${i + 1}`, group: m[0], round: m[1], date: m[2], home: m[3], away: m[4], custom: false }));
+    const excludedCompetitionMatchIds = new Set(["m9"]);
 
     let state = loadState();
     let matches = buildMatches();
@@ -627,13 +628,36 @@
       if (!data?.ok) throw new Error(data?.message || "Login invalido");
       return normalizeState(data.state);
     }
+    function mergePredictionsPreservingRemote(localPredictions = {}, remotePredictions = {}) {
+      const merged = { ...localPredictions };
+      Object.entries(remotePredictions || {}).forEach(([user, predictions]) => {
+        merged[user] = { ...(merged[user] || {}), ...(predictions || {}) };
+      });
+      return merged;
+    }
     async function persistRemote() {
       if (!db || !session.authenticated) return;
-      const fn = session.admin ? "save_admin_state" : "save_user_predictions";
-      const args = session.admin
-        ? { p_password: session.password, p_state: state }
-        : { p_user: session.user, p_password: session.password, p_predictions: state.predictions[session.user] || {} };
-      const { data, error } = await db.rpc(fn, args);
+      if (session.admin) {
+        const remoteState = await loginRemote("Administrador", session.password);
+        const mergedState = normalizeState(remoteState);
+        mergedState.users = state.users;
+        mergedState.passwords = state.passwords;
+        mergedState.adminPassword = state.adminPassword;
+        mergedState.settings = state.settings;
+        mergedState.customMatches = state.customMatches;
+        mergedState.results = { ...(state.results || {}), ...(remoteState.results || {}) };
+        mergedState.predictions = mergePredictionsPreservingRemote(state.predictions || {}, remoteState.predictions || {});
+        const { data, error } = await db.rpc("save_admin_state", { p_password: session.password, p_state: mergedState });
+        if (error || data?.ok === false) throw error || new Error(data?.message || "No se pudo guardar");
+        state = normalizeState(mergedState);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        return;
+      }
+      const { data, error } = await db.rpc("save_user_predictions", {
+        p_user: session.user,
+        p_password: session.password,
+        p_predictions: state.predictions[session.user] || {}
+      });
       if (error || data?.ok === false) throw error || new Error(data?.message || "No se pudo guardar");
     }
     async function changePlayerPasswordRemote(newPassword) {
@@ -651,7 +675,9 @@
       return true;
     }
     function buildMatches() {
-      return [...baseMatches, ...state.customMatches].sort((a, b) => a.date.localeCompare(b.date) || a.round - b.round || a.id.localeCompare(b.id));
+      return [...baseMatches, ...state.customMatches]
+        .filter(match => !excludedCompetitionMatchIds.has(match.id))
+        .sort((a, b) => a.date.localeCompare(b.date) || a.round - b.round || a.id.localeCompare(b.id));
     }
     function persist() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -907,7 +933,7 @@
       byId("adminPass").disabled = session.authenticated;
       byId("statUsers").textContent = state.users.length;
       byId("statMatches").textContent = matches.length;
-      byId("statDone").textContent = Object.keys(state.results).length;
+      byId("statDone").textContent = matches.filter(match => state.results[match.id]).length;
       byId("roleLine").textContent = session.authenticated ? (session.admin ? "Admin activo" : `Jugador - ${session.user}`) : "";
       byId("sessionSummary").textContent = session.authenticated ? (session.admin ? "Admin activo" : session.user) : "";
       byId("sessionPanel").open = !session.authenticated ? true : byId("sessionPanel").open;
