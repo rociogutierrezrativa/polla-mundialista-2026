@@ -579,6 +579,8 @@
     let state = loadState();
     let matches = buildMatches();
     let session = { user: null, admin: false, authenticated: false, password: "" };
+    let pendingPredictionUsers = new Set();
+    let pendingResultIds = new Set();
 
     function defaultPasswords(users) {
       return Object.fromEntries(users.map(user => [user, DEFAULT_PLAYER_PASSWORD]));
@@ -629,9 +631,10 @@
       return normalizeState(data.state);
     }
     function mergePredictionsPreservingRemote(localPredictions = {}, remotePredictions = {}) {
-      const merged = { ...localPredictions };
-      Object.entries(remotePredictions || {}).forEach(([user, predictions]) => {
-        merged[user] = { ...(merged[user] || {}), ...(predictions || {}) };
+      const merged = { ...(remotePredictions || {}) };
+      Object.entries(localPredictions || {}).forEach(([user, predictions]) => {
+        if (pendingPredictionUsers.has(user)) merged[user] = { ...(predictions || {}) };
+        else merged[user] = { ...(predictions || {}), ...(merged[user] || {}) };
       });
       return merged;
     }
@@ -645,11 +648,16 @@
         mergedState.adminPassword = state.adminPassword;
         mergedState.settings = state.settings;
         mergedState.customMatches = state.customMatches;
-        mergedState.results = { ...(state.results || {}), ...(remoteState.results || {}) };
+        mergedState.results = { ...(remoteState.results || {}), ...(state.results || {}) };
+        pendingResultIds.forEach(id => {
+          if (!state.results?.[id]) delete mergedState.results[id];
+        });
         mergedState.predictions = mergePredictionsPreservingRemote(state.predictions || {}, remoteState.predictions || {});
         const { data, error } = await db.rpc("save_admin_state", { p_password: session.password, p_state: mergedState });
         if (error || data?.ok === false) throw error || new Error(data?.message || "No se pudo guardar");
         state = normalizeState(mergedState);
+        pendingPredictionUsers.clear();
+        pendingResultIds.clear();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         return;
       }
@@ -987,6 +995,7 @@
       document.querySelectorAll(`[data-score^="${prefix}-home-"]`).forEach(input => {
         const id = input.dataset.score.replace(`${prefix}-home-`, "");
         const away = document.querySelector(`[data-score="${prefix}-away-${id}"]`);
+        if (prefix === "result") pendingResultIds.add(id);
         if (input.value === "" && away.value === "") delete target[id];
         else target[id] = { home: input.value === "" ? "" : Number(input.value), away: away.value === "" ? "" : Number(away.value) };
       });
@@ -1065,6 +1074,7 @@
     byId("savePredictions").addEventListener("click", () => {
       if (!session.authenticated) return toast("Primero debes entrar con tu usuario");
       const targetUser = predictionTargetUser();
+      if (session.admin) pendingPredictionUsers.add(targetUser);
       state.predictions[targetUser] ||= {};
       const target = state.predictions[targetUser];
       let invalid = 0;
