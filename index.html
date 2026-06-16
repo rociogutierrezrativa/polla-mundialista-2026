@@ -72,9 +72,7 @@
     body.locked main,
     body.locked nav,
     body.not-admin [data-view="admin"],
-    body.not-admin [data-view="audit"],
-    body.not-admin #view-admin,
-    body.not-admin #view-audit {
+    body.not-admin #view-admin {
       display: none !important;
     }
     aside {
@@ -271,6 +269,9 @@
     .badge.locked { background: #f6e7e5; color: var(--red); }
     .badge.open { background: #efffd0; color: #436100; }
     .badge.result { background: #efe4ff; color: var(--purple); }
+    .standings-head-right, .history-head-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .audit-box { border: 1px solid var(--line); background: #f8faf6; border-radius: 8px; padding: 8px 10px; min-width: 240px; font-size: 12px; color: var(--muted); }
+    .audit-box b { display: block; color: var(--black); font-size: 13px; margin-bottom: 2px; }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -290,6 +291,7 @@
       letter-spacing: 0;
       background: #f7f8f4;
     }
+    .subtotal-row td { background: #f8faf6; font-weight: 800; color: var(--black); }
     .right { text-align: right; }
     .audit-table th:first-child,
     .audit-table td:first-child {
@@ -383,6 +385,8 @@
       th, td { padding: 8px; }
       .table-wrap { overflow-x: auto; }
       .panel-head { align-items: flex-start; flex-direction: column; }
+      .standings-head-right, .history-head-right { justify-content: flex-start; width: 100%; }
+      .audit-box { width: 100%; min-width: 0; }
     }
   </style>
 </head>
@@ -411,10 +415,10 @@
         </div>
       </details>
       <nav>
-        <button class="nav-btn active" type="button" data-view="predictions">Predicciones</button>
-        <button class="nav-btn" type="button" data-view="standings">Tabla</button>
-        <button class="nav-btn" type="button" data-view="history">Historial</button>
+        <button class="nav-btn active" type="button" data-view="predictions">Mis predicciones</button>
+        <button class="nav-btn" type="button" data-view="standings">Tabla de puntajes</button>
         <button class="nav-btn" type="button" data-view="audit">Predicciones por jornada</button>
+        <button class="nav-btn" type="button" data-view="history">Mis puntos</button>
         <button class="nav-btn" type="button" data-view="admin">Admin</button>
       </nav>
     </aside>
@@ -453,7 +457,10 @@
         <div class="panel">
           <div class="panel-head">
             <h2>Tabla de posiciones</h2>
-            <span class="badge result">Exacto 3 pts - Resultado 1 pt</span>
+            <div class="standings-head-right">
+              <span class="badge result">Exacto 3 pts - Resultado 1 pt</span>
+              <div id="lastLoadedBox" class="audit-box"></div>
+            </div>
           </div>
           <div class="table-wrap"><table id="standingsTable"></table></div>
         </div>
@@ -462,8 +469,11 @@
       <section id="view-history" class="hidden">
         <div class="panel">
           <div class="panel-head">
-            <h2>Historial de puntos</h2>
-            <div style="min-width:220px"><select id="historyUser"></select></div>
+            <h2>Mi historial de puntos</h2>
+            <div class="history-head-right">
+              <div id="historyCurrentPoints" class="audit-box"></div>
+              <div style="min-width:220px"><select id="historyUser"></select></div>
+            </div>
           </div>
           <div class="table-wrap"><table id="historyTable"></table></div>
         </div>
@@ -479,6 +489,7 @@
             <div class="panel-body">
               <div class="field" style="margin-bottom:10px"><label for="receptionRound">Cierre por jornada</label><select id="receptionRound"></select></div>
               <label class="checkline"><input id="unlockPredictions" type="checkbox" /> Recepción abierta para esta jornada</label>
+              <label class="checkline"><input id="publishAuditRound" type="checkbox" /> Mostrar predicciones por jornada a jugadores</label>
               <div class="toolbar">
                 <div class="field"><label for="adminRoundFilter">Jornada</label><select id="adminRoundFilter"></select></div>
                 <div class="field"><label for="adminSearch">Buscar</label><input id="adminSearch" placeholder="Equipo o fecha" /></div>
@@ -513,7 +524,6 @@
           </div>
         </div>
       </section>
-
       <section id="view-audit" class="hidden">
         <div class="panel">
           <div class="panel-head">
@@ -556,24 +566,25 @@
       "Uzbekistan":"uz","Colombia":"co"
     };
     const baseMatches = [
-      ["A",1,"2026-06-11","Mexico","Sudafrica"],["A",1,"2026-06-11","Corea del Sur","Rep. Checa"],
-      ["B",2,"2026-06-12","Canada","Bosnia"],["D",2,"2026-06-12","Estados Unidos","Paraguay"],
-      ["B",3,"2026-06-13","Catar","Suiza"],["C",3,"2026-06-13","Brasil","Marruecos"],["C",3,"2026-06-13","Haiti","Escocia"],["D",3,"2026-06-13","Australia","Turquia"],
-      ["E",4,"2026-06-14","Alemania","Curazao"],["F",4,"2026-06-14","Paises Bajos","Japon"],["E",4,"2026-06-14","Costa de Marfil","Ecuador"],["F",4,"2026-06-14","Suecia","Tunez"],
-      ["H",5,"2026-06-15","España","Cabo Verde"],["G",5,"2026-06-15","Belgica","Egipto"],["H",5,"2026-06-15","Arabia Saudita","Uruguay"],["G",5,"2026-06-15","Iran","Nueva Zelanda"],
-      ["I",6,"2026-06-16","Francia","Senegal"],["I",6,"2026-06-16","Irak","Noruega"],["J",6,"2026-06-16","Argentina","Argelia"],["J",6,"2026-06-16","Austria","Jordania"],
-      ["K",7,"2026-06-17","Portugal","Rep. de Congo"],["L",7,"2026-06-17","Inglaterra","Croacia"],["L",7,"2026-06-17","Ghana","Panama"],["K",7,"2026-06-17","Uzbekistan","Colombia"],
-      ["A",8,"2026-06-18","Rep. Checa","Sudafrica"],["B",8,"2026-06-18","Suiza","Bosnia"],["B",8,"2026-06-18","Canada","Catar"],["A",8,"2026-06-18","Mexico","Corea del Sur"],
-      ["D",9,"2026-06-19","Estados Unidos","Australia"],["C",9,"2026-06-19","Escocia","Marruecos"],["C",9,"2026-06-19","Brasil","Haiti"],["D",9,"2026-06-19","Turquia","Paraguay"],
-      ["F",10,"2026-06-20","Paises Bajos","Suecia"],["E",10,"2026-06-20","Alemania","Costa de Marfil"],["E",10,"2026-06-20","Ecuador","Curazao"],["F",10,"2026-06-20","Tunez","Japon"],
-      ["H",11,"2026-06-21","España","Arabia Saudita"],["G",11,"2026-06-21","Belgica","Iran"],["H",11,"2026-06-21","Uruguay","Cabo Verde"],["G",11,"2026-06-21","Nueva Zelanda","Egipto"],
-      ["J",12,"2026-06-22","Argentina","Austria"],["I",12,"2026-06-22","Francia","Irak"],["I",12,"2026-06-22","Noruega","Senegal"],["J",12,"2026-06-22","Jordania","Argelia"],
-      ["K",13,"2026-06-23","Portugal","Uzbekistan"],["L",13,"2026-06-23","Inglaterra","Ghana"],["L",13,"2026-06-23","Panama","Croacia"],["K",13,"2026-06-23","Colombia","Rep. de Congo"],
-      ["B",14,"2026-06-24","Suiza","Canada"],["B",14,"2026-06-24","Bosnia","Catar"],["C",14,"2026-06-24","Marruecos","Haiti"],["C",14,"2026-06-24","Escocia","Brasil"],["A",14,"2026-06-24","Sudafrica","Corea del Sur"],["A",14,"2026-06-24","Rep. Checa","Mexico"],
-      ["E",15,"2026-06-25","Curazao","Costa de Marfil"],["E",15,"2026-06-25","Ecuador","Alemania"],["F",15,"2026-06-25","Tunez","Paises Bajos"],["F",15,"2026-06-25","Japon","Suecia"],["D",15,"2026-06-25","Turquia","Estados Unidos"],["D",15,"2026-06-25","Paraguay","Australia"],
-      ["I",16,"2026-06-26","Noruega","Francia"],["I",16,"2026-06-26","Senegal","Irak"],["H",16,"2026-06-26","Cabo Verde","Arabia Saudita"],["H",16,"2026-06-26","Uruguay","España"],["G",16,"2026-06-26","Nueva Zelanda","Belgica"],["G",16,"2026-06-26","Egipto","Iran"],
-      ["L",17,"2026-06-27","Panama","Inglaterra"],["L",17,"2026-06-27","Croacia","Ghana"],["K",17,"2026-06-27","Colombia","Portugal"],["K",17,"2026-06-27","Rep. del Congo","Uzbekistan"],["J",17,"2026-06-27","Argelia","Austria"],["J",17,"2026-06-27","Jordania","Argentina"]
-    ].map((m, i) => ({ id: `m${i + 1}`, group: m[0], round: m[1], date: m[2], home: m[3], away: m[4], custom: false }));
+      ["A",1,"2026-06-11","Mexico","Sudafrica","14:00"],["A",1,"2026-06-11","Corea del Sur","Rep. Checa","21:00"],["B",2,"2026-06-12","Canada","Bosnia","14:00"],["D",2,"2026-06-12","Estados Unidos","Paraguay","20:00"],
+      ["B",3,"2026-06-13","Catar","Suiza","14:00"],["C",3,"2026-06-13","Brasil","Marruecos","17:00"],["C",3,"2026-06-13","Haiti","Escocia","20:00"],["D",3,"2026-06-13","Australia","Turquia","23:00"],
+      ["E",4,"2026-06-14","Alemania","Curazao","12:00"],["F",4,"2026-06-14","Paises Bajos","Japon","15:00"],["E",4,"2026-06-14","Costa de Marfil","Ecuador","18:00"],["F",4,"2026-06-14","Suecia","Tunez","21:00"],
+      ["H",5,"2026-06-15","España","Cabo Verde","11:00"],["G",5,"2026-06-15","Belgica","Egipto","14:00"],["H",5,"2026-06-15","Arabia Saudita","Uruguay","17:00"],["G",5,"2026-06-15","Iran","Nueva Zelanda","20:00"],
+      ["I",6,"2026-06-16","Francia","Senegal","14:00"],["I",6,"2026-06-16","Irak","Noruega","17:00"],["J",6,"2026-06-16","Argentina","Argelia","20:00"],["J",6,"2026-06-16","Austria","Jordania","23:00"],
+      ["K",7,"2026-06-17","Portugal","Rep. de Congo","12:00"],["L",7,"2026-06-17","Inglaterra","Croacia","15:00"],["L",7,"2026-06-17","Ghana","Panama","18:00"],["K",7,"2026-06-17","Uzbekistan","Colombia","21:00"],
+      ["A",8,"2026-06-18","Rep. Checa","Sudafrica","11:00"],["B",8,"2026-06-18","Suiza","Bosnia","14:00"],["B",8,"2026-06-18","Canada","Catar","17:00"],["A",8,"2026-06-18","Mexico","Corea del Sur","20:00"],
+      ["D",9,"2026-06-19","Estados Unidos","Australia","14:00"],["C",9,"2026-06-19","Escocia","Marruecos","14:00"],["C",9,"2026-06-19","Brasil","Haiti","20:00"],["D",9,"2026-06-19","Turquia","Paraguay","23:00"],
+      ["F",10,"2026-06-20","Paises Bajos","Suecia","12:00"],["E",10,"2026-06-20","Alemania","Costa de Marfil","15:00"],["E",10,"2026-06-20","Ecuador","Curazao","19:00"],["F",10,"2026-06-20","Tunez","Japon","23:00"],
+      ["H",11,"2026-06-21","España","Arabia Saudita","11:00"],["G",11,"2026-06-21","Belgica","Iran","14:00"],["H",11,"2026-06-21","Uruguay","Cabo Verde","17:00"],["G",11,"2026-06-21","Nueva Zelanda","Egipto","20:00"],
+      ["J",12,"2026-06-22","Argentina","Austria","12:00"],["I",12,"2026-06-22","Francia","Irak","16:00"],["I",12,"2026-06-22","Noruega","Senegal","19:00"],["J",12,"2026-06-22","Jordania","Argelia","22:00"],
+      ["K",13,"2026-06-23","Portugal","Uzbekistan","12:00"],["L",13,"2026-06-23","Inglaterra","Ghana","15:00"],["L",13,"2026-06-23","Panama","Croacia","18:00"],["K",13,"2026-06-23","Colombia","Rep. de Congo","21:00"],
+      ["B",14,"2026-06-24","Suiza","Canada","14:00"],["B",14,"2026-06-24","Bosnia","Catar","14:00"],["C",14,"2026-06-24","Marruecos","Haiti","17:00"],["C",14,"2026-06-24","Escocia","Brasil","17:00"],
+      ["A",14,"2026-06-24","Sudafrica","Corea del Sur","20:00"],["A",14,"2026-06-24","Rep. Checa","Mexico","20:00"],["E",15,"2026-06-25","Curazao","Costa de Marfil","15:00"],["E",15,"2026-06-25","Ecuador","Alemania","15:00"],
+      ["F",15,"2026-06-25","Tunez","Paises Bajos","18:00"],["F",15,"2026-06-25","Japon","Suecia","18:00"],["D",15,"2026-06-25","Turquia","Estados Unidos","21:00"],["D",15,"2026-06-25","Paraguay","Australia","21:00"],
+      ["I",16,"2026-06-26","Noruega","Francia","14:00"],["I",16,"2026-06-26","Senegal","Irak","14:00"],["H",16,"2026-06-26","Cabo Verde","Arabia Saudita","19:00"],["H",16,"2026-06-26","Uruguay","España","19:00"],
+      ["G",16,"2026-06-26","Nueva Zelanda","Belgica","22:00"],["G",16,"2026-06-26","Egipto","Iran","22:00"],["L",17,"2026-06-27","Panama","Inglaterra","16:00"],["L",17,"2026-06-27","Croacia","Ghana","16:00"],
+      ["K",17,"2026-06-27","Colombia","Portugal","18:30"],["K",17,"2026-06-27","Rep. del Congo","Uzbekistan","18:30"],["J",17,"2026-06-27","Argelia","Austria","21:00"],["J",17,"2026-06-27","Jordania","Argentina","21:00"]
+    ].map((m, i) => ({ id: `m${i + 1}`, group: m[0], round: m[1], date: m[2], home: m[3], away: m[4], time: m[5] || "", custom: false }));
     const excludedCompetitionMatchIds = new Set(["m9"]);
 
     let state = loadState();
@@ -594,7 +605,7 @@
         users,
         passwords,
         adminPassword: base.adminPassword || DEFAULT_ADMIN_PASSWORD,
-        settings: { predictionsReceptionOpen: true, predictionsUnlocked: false, roundReception: {}, ...(base.settings || {}) },
+        settings: { predictionsReceptionOpen: true, predictionsUnlocked: false, roundReception: {}, auditRoundVisible: {}, ...(base.settings || {}) },
         customMatches: Array.isArray(base.customMatches) ? base.customMatches : [],
         predictions: base.predictions || {},
         results: base.results || {}
@@ -685,7 +696,7 @@
     function buildMatches() {
       return [...baseMatches, ...state.customMatches]
         .filter(match => !excludedCompetitionMatchIds.has(match.id))
-        .sort((a, b) => a.date.localeCompare(b.date) || a.round - b.round || a.id.localeCompare(b.id));
+        .sort((a, b) => a.date.localeCompare(b.date) || (a.time || "").localeCompare(b.time || "") || a.round - b.round || a.id.localeCompare(b.id));
     }
     function persist() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -703,6 +714,9 @@
     function formatDate(iso) {
       const [y, m, d] = iso.split("-");
       return `${d}/${m}/${y}`;
+    }
+    function formatMatchDateTime(match) {
+      return `${formatDate(match.date)}${match.time ? ` ${match.time}` : ""}`;
     }
     function formatDayDate(iso) {
       const [y, m, d] = iso.split("-");
@@ -740,6 +754,13 @@
     function isRoundReceptionOpen(round) {
       const saved = state.settings.roundReception?.[String(round)];
       return saved === undefined ? !!state.settings.predictionsReceptionOpen : !!saved;
+    }
+    function isAuditRoundVisible(round) {
+      return !!state.settings.auditRoundVisible?.[String(round)];
+    }
+    function visibleAuditRounds() {
+      const rounds = [...new Set(matches.map(m => String(m.round)))];
+      return session.admin ? rounds : rounds.filter(round => isAuditRoundVisible(round));
     }
     function isLocked(match) {
       return !isRoundReceptionOpen(match.round);
@@ -790,7 +811,7 @@
       const group = groupId && byId(groupId) ? byId(groupId).value : "all";
       const term = searchId && byId(searchId) ? byId(searchId).value.trim().toLowerCase() : "";
       return matches.filter(m => {
-        const text = `${m.group} Jornada ${m.round} ${formatDate(m.date)} ${m.home} ${m.away}`.toLowerCase();
+        const text = `${m.group} Jornada ${m.round} ${formatMatchDateTime(m)} ${m.home} ${m.away}`.toLowerCase();
         return (round === "all" || String(m.round) === round) && (group === "all" || m.group === group) && (!term || text.includes(term));
       });
     }
@@ -819,7 +840,7 @@
         const pts = pointsFor(targetUser, match);
         return `<article class="match">
           <div class="teams">
-            <div class="meta">Grupo ${match.group} - Jornada ${match.round} - ${formatDate(match.date)}</div>
+            <div class="meta">Grupo ${match.group} - Jornada ${match.round} - ${formatMatchDateTime(match)}</div>
             <div class="team">${countryLabel(match.home)}</div>
             <div class="team">${countryLabel(match.away)}</div>
           </div>
@@ -838,7 +859,7 @@
         const result = state.results[match.id] || {};
         return `<article class="match">
           <div class="teams">
-            <div class="meta">Grupo ${match.group} - Jornada ${match.round} - ${formatDate(match.date)}</div>
+            <div class="meta">Grupo ${match.group} - Jornada ${match.round} - ${formatMatchDateTime(match)}</div>
             <div class="team">${countryLabel(match.home)}</div>
             <div class="team">${countryLabel(match.away)}</div>
           </div>
@@ -847,29 +868,59 @@
         </article>`;
       }).join("");
     }
+    function lastLoadedResultInfo() {
+      const loaded = matches
+        .filter(match => hasCompleteScore(state.results[match.id]))
+        .sort((a, b) => a.date.localeCompare(b.date) || a.round - b.round || a.id.localeCompare(b.id));
+      const match = loaded[loaded.length - 1];
+      if (!match) return "<b>Último partido cargado</b><span>Sin resultados oficiales cargados.</span>";
+      const result = state.results[match.id];
+      return `<b>Último partido cargado</b><span>Jornada ${match.round} - ${formatMatchDateTime(match)} - ${escapeHtml(match.home)} ${result.home}-${result.away} ${escapeHtml(match.away)}</span>`;
+    }
     function renderStandings() {
+      byId("lastLoadedBox").innerHTML = lastLoadedResultInfo();
       byId("standingsTable").innerHTML = `
         <thead><tr><th>Participante</th><th class="right">Puntos</th><th class="right">Exactos</th><th class="right">Resultados</th><th class="right">Partidos cerrados</th></tr></thead>
         <tbody>${standings().map(r => `<tr><td>${r.user}</td><td class="right"><b>${r.pts}</b></td><td class="right">${r.exact}</td><td class="right">${r.result}</td><td class="right">${r.played}</td></tr>`).join("")}</tbody>`;
     }
     function renderHistory() {
       const user = byId("historyUser").value || session.user;
-      byId("historyTable").innerHTML = `
-        <thead><tr><th>Fecha</th><th>Partido</th><th>Predicción</th><th>Final</th><th class="right">Puntos</th></tr></thead>
-        <tbody>${matches.map(match => {
-          const pred = state.predictions[user]?.[match.id];
-          const res = state.results[match.id];
-          return `<tr>
-            <td>${formatDate(match.date)}</td>
+      let currentRound = null;
+      let roundTotal = 0;
+      let currentPoints = 0;
+      let rows = "";
+      matches.forEach((match, index) => {
+        if (currentRound !== null && currentRound !== match.round) {
+          rows += `<tr class="subtotal-row"><td colspan="5">Total Jornada ${currentRound}</td><td class="right">${roundTotal}</td></tr>`;
+          roundTotal = 0;
+        }
+        currentRound = match.round;
+        const pred = state.predictions[user]?.[match.id];
+        const res = state.results[match.id];
+        const pts = pointsFor(user, match);
+        const hasFinalResult = hasCompleteScore(res);
+        const hitLabel = hasFinalResult ? (pts === 3 ? "Exacto" : pts === 1 ? "Ganador" : "Sin acierto") : "";
+        roundTotal += pts;
+        currentPoints += pts;
+        rows += `<tr>
+            <td>${formatMatchDateTime(match)}</td>
             <td>${countryInline(match.home)} vs ${countryInline(match.away)}</td>
             <td>${pred ? `${pred.home}-${pred.away}` : "Sin predicción"}</td>
-            <td>${res ? `${res.home}-${res.away}` : "Pendiente"}</td>
-            <td class="right"><b>${pointsFor(user, match)}</b></td>
+            <td>${hasFinalResult ? `${res.home}-${res.away}` : ""}</td>
+            <td>${hitLabel}</td>
+            <td class="right"><b>${pts}</b></td>
           </tr>`;
-        }).join("")}</tbody>`;
+        if (index === matches.length - 1) {
+          rows += `<tr class="subtotal-row"><td colspan="5">Total Jornada ${currentRound}</td><td class="right">${roundTotal}</td></tr>`;
+        }
+      });
+      byId("historyCurrentPoints").innerHTML = `<b>Puntos actuales</b><span>${currentPoints} puntos acumulados</span>`;
+      byId("historyTable").innerHTML = `
+        <thead><tr><th>Fecha</th><th>Partido</th><th>Predicción</th><th>Final</th><th>Acierto</th><th class="right">Puntos</th></tr></thead>
+        <tbody>${rows}</tbody>`;
     }
     function auditRows() {
-      const round = byId("auditRound").value || String(matches[0]?.round || 1);
+      const round = byId("auditRound").value || "";
       const term = byId("auditSearch").value.trim().toLowerCase();
       const roundMatches = matches.filter(match => String(match.round) === String(round));
       const users = state.users.filter(user => !term || user.toLowerCase().includes(term));
@@ -878,11 +929,19 @@
     function renderPredictionAudit() {
       const table = byId("auditTable");
       const { round, roundMatches, users } = auditRows();
+      if (!round) {
+        table.innerHTML = `<tbody><tr><td class="empty">No hay jornadas publicadas por el administrador.</td></tr></tbody>`;
+        return;
+      }
+      if (!session.admin && !isAuditRoundVisible(round)) {
+        table.innerHTML = `<tbody><tr><td class="empty">Esta jornada todavía no está habilitada para consulta.</td></tr></tbody>`;
+        return;
+      }
       if (!roundMatches.length) {
         table.innerHTML = `<tbody><tr><td class="empty">No hay partidos para esta jornada.</td></tr></tbody>`;
         return;
       }
-      const headers = roundMatches.map(match => `<th>${countryInline(match.home)} vs ${countryInline(match.away)}<div class="meta">${formatDate(match.date)}</div></th>`).join("");
+      const headers = roundMatches.map(match => `<th>${countryInline(match.home)} vs ${countryInline(match.away)}<div class="meta">${formatMatchDateTime(match)}</div></th>`).join("");
       const rows = users.map(user => {
         const cells = roundMatches.map(match => {
           const pred = state.predictions[user]?.[match.id];
@@ -897,6 +956,7 @@
     }
     function downloadAuditCsv() {
       const { round, roundMatches, users } = auditRows();
+      if (!round || (!session.admin && !isAuditRoundVisible(round))) return toast("Jornada no habilitada para consulta");
       const header = ["Participante", ...roundMatches.map(match => `${match.home} vs ${match.away}`)];
       const rows = users.map(user => [
         user,
@@ -927,7 +987,7 @@
     function renderCustomMatches() {
       byId("customMatchList").innerHTML = state.customMatches.length ? state.customMatches.map(match => `<div class="person">
         <b>${countryInline(match.home)} vs ${countryInline(match.away)}</b>
-        <span class="meta">Grupo ${match.group} - Jornada ${match.round} - ${formatDate(match.date)}</span>
+        <span class="meta">Grupo ${match.group} - Jornada ${match.round} - ${formatMatchDateTime(match)}</span>
         <button data-remove-match="${match.id}" type="button" ${session.admin ? "" : "disabled"}>Eliminar</button>
       </div>`).join("") : `<div class="empty" style="padding:18px">No hay partidos agregados.</div>`;
     }
@@ -950,6 +1010,7 @@
       byId("adminState").textContent = session.admin ? `Admin activo - Jornada ${selectedRound} ${selectedRoundOpen ? "abierta" : "cerrada"}` : "Solo lectura";
       byId("predictionUserWrap").classList.toggle("hidden", !session.admin);
       byId("unlockPredictions").checked = selectedRoundOpen;
+      byId("publishAuditRound").checked = isAuditRoundVisible(selectedRound);
       byId("adminPasswordEdit").value = state.adminPassword || DEFAULT_ADMIN_PASSWORD;
     }
     function fillSelects() {
@@ -961,8 +1022,9 @@
       ["roundFilter","adminRoundFilter"].forEach(id => byId(id).innerHTML = roundHtml);
       byId("receptionRound").innerHTML = receptionRoundHtml;
       if (rounds.includes(previousReceptionRound)) byId("receptionRound").value = previousReceptionRound;
-      byId("auditRound").innerHTML = receptionRoundHtml;
-      if (rounds.includes(previousAuditRound)) byId("auditRound").value = previousAuditRound;
+      const auditRounds = visibleAuditRounds();
+      byId("auditRound").innerHTML = auditRounds.length ? auditRounds.map(r => `<option value="${r}">${roundLabel(r)}</option>`).join("") : `<option value="">Sin jornadas publicadas</option>`;
+      if (auditRounds.includes(previousAuditRound)) byId("auditRound").value = previousAuditRound;
     }
     function fillUsers() {
       const html = `<option value="">Selecciona usuario</option>` + state.users.map(u => `<option value="${u}">${u}</option>`).join("") + `<option value="Administrador">Administrador</option>`;
@@ -1003,7 +1065,7 @@
 
     document.querySelectorAll(".nav-btn").forEach(btn => btn.addEventListener("click", () => {
       if (!session.authenticated) return toast("Primero debes entrar con tu usuario");
-      if ((btn.dataset.view === "admin" || btn.dataset.view === "audit") && !session.admin) return toast("El módulo admin requiere clave");
+      if (btn.dataset.view === "admin" && !session.admin) return toast("El módulo admin requiere clave");
       document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       document.querySelectorAll("main > section").forEach(s => s.classList.add("hidden"));
@@ -1184,6 +1246,16 @@
       persist();
       renderAll();
       toast(byId("unlockPredictions").checked ? `Jornada ${round} abierta` : `Jornada ${round} cerrada`);
+    });
+    byId("publishAuditRound").addEventListener("change", () => {
+      if (!session.admin) return toast("Debes entrar como administrador");
+      state.settings.auditRoundVisible ||= {};
+      const round = byId("receptionRound").value;
+      state.settings.auditRoundVisible[round] = byId("publishAuditRound").checked;
+      persist();
+      fillSelects();
+      renderAll();
+      toast(byId("publishAuditRound").checked ? `Jornada ${round} visible para jugadores` : `Jornada ${round} oculta para jugadores`);
     });
     byId("receptionRound").addEventListener("change", renderStats);
     byId("resetDemo").addEventListener("click", async () => {
