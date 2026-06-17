@@ -1042,6 +1042,7 @@
       }
     }
     function renderAll() {
+      fillSelects();
       fillUsers();
       renderStats();
       if (!session.authenticated) return;
