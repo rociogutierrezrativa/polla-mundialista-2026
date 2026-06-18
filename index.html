@@ -553,6 +553,8 @@
     const DEFAULT_ADMIN_PASSWORD = "admin2026";
     const DEFAULT_PLAYER_PASSWORD = "jugador2026";
     const STORAGE_KEY = "polla-mundialista-2026";
+    const AUTO_LOGOUT_MS = 5 * 60 * 1000;
+    let inactivityTimer = null;
     const defaultUsers = Array.from({ length: 50 }, (_, i) => `Jugador ${String(i + 1).padStart(2, "0")}`);
     const flagCodes = {
       "Mexico":"mx","Sudafrica":"za","Corea del Sur":"kr","Rep. Checa":"cz","Canada":"ca","Bosnia":"ba",
@@ -698,10 +700,15 @@
         .filter(match => !excludedCompetitionMatchIds.has(match.id))
         .sort((a, b) => a.date.localeCompare(b.date) || (a.time || "").localeCompare(b.time || "") || a.round - b.round || a.id.localeCompare(b.id));
     }
-    function persist() {
+    async function persist() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       if (db && session.authenticated) {
-        persistRemote().catch(() => toast("No se pudo guardar en Supabase"));
+        try {
+          await persistRemote();
+        } catch (error) {
+          toast("No se pudo guardar en Supabase");
+          throw error;
+        }
       }
     }
     function byId(id) { return document.getElementById(id); }
@@ -710,6 +717,33 @@
       el.textContent = msg;
       el.classList.add("show");
       setTimeout(() => el.classList.remove("show"), 2200);
+    }
+    function logoutSession(message = "Sesión cerrada por inactividad") {
+      if (!session.authenticated) return;
+      session = { user: null, admin: false, authenticated: false, password: "" };
+      byId("adminPass").value = "";
+      byId("playerNewPassword").value = "";
+      byId("sessionPanel").open = true;
+      if (db) loadLoginOptions();
+      renderAll();
+      toast(message);
+    }
+    function resetInactivityTimer() {
+      clearTimeout(inactivityTimer);
+      if (!session.authenticated) return;
+      inactivityTimer = setTimeout(() => logoutSession(), AUTO_LOGOUT_MS);
+    }
+    function applyLatestState(remoteState) {
+      if (!remoteState) return;
+      state = normalizeState(remoteState);
+      matches = buildMatches();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+    async function refreshLatestState() {
+      if (!db || !session.authenticated) return null;
+      const remoteState = await loginRemote(session.admin ? "Administrador" : session.user, session.password);
+      applyLatestState(remoteState);
+      return state;
     }
     function formatDate(iso) {
       const [y, m, d] = iso.split("-");
@@ -1109,15 +1143,9 @@
       document.querySelectorAll("main > section").forEach(s => s.classList.add("hidden"));
       byId("view-predictions").classList.remove("hidden");
       renderAll();
+      resetInactivityTimer();
     });
-    byId("logoutBtn").addEventListener("click", () => {
-      session = { user: null, admin: false, authenticated: false, password: "" };
-      byId("adminPass").value = "";
-      byId("playerNewPassword").value = "";
-      byId("sessionPanel").open = true;
-      if (db) loadLoginOptions();
-      renderAll();
-    });
+    byId("logoutBtn").addEventListener("click", () => logoutSession("Sesión cerrada"));
     byId("savePlayerPassword").addEventListener("click", async () => {
       if (!session.authenticated || session.admin) return toast("Entra como jugador para cambiar tu contraseña");
       const nextPassword = byId("playerNewPassword").value.trim();
@@ -1134,41 +1162,65 @@
         toast(error.message || "No se pudo cambiar la contraseña");
       }
     });
-    byId("savePredictions").addEventListener("click", () => {
+    byId("savePredictions").addEventListener("click", async () => {
       if (!session.authenticated) return toast("Primero debes entrar con tu usuario");
       const targetUser = predictionTargetUser();
-      if (session.admin) pendingPredictionUsers.add(targetUser);
-      state.predictions[targetUser] ||= {};
-      const target = state.predictions[targetUser];
+      const attempted = {};
       let invalid = 0;
-      let blocked = 0;
       document.querySelectorAll('[data-score^="pred-home-"]').forEach(input => {
         const id = input.dataset.score.replace("pred-home-", "");
-        const match = matches.find(m => m.id === id);
         const away = document.querySelector(`[data-score="pred-away-${id}"]`);
-        if (!session.admin && input.disabled) return;
-        const currentPrediction = target[id];
-        const finalResult = state.results[id];
-        if (!session.admin && (isLocked(match) || hasCompleteScore(currentPrediction) || hasCompleteScore(finalResult))) {
-          blocked += 1;
+        if (input.value === "" && away.value === "") return;
+        if (input.value === "" || away.value === "") {
+          invalid += 1;
           return;
         }
-        if (input.value === "" && away.value === "") delete target[id];
-        else if (input.value === "" || away.value === "") invalid += 1;
-        else target[id] = { home: input.value === "" ? "" : Number(input.value), away: away.value === "" ? "" : Number(away.value) };
+        attempted[id] = { home: Number(input.value), away: Number(away.value) };
       });
-      persist();
-      renderAll();
       if (invalid) return toast("Completa local y visitante antes de guardar");
-      if (blocked && !session.admin) return toast("Algunas predicciones ya estaban bloqueadas");
-      toast(session.admin ? `Predicciones guardadas para ${targetUser}` : "Predicciones guardadas y bloqueadas");
+      try {
+        if (db) await refreshLatestState();
+        if (session.admin) pendingPredictionUsers.add(targetUser);
+        state.predictions[targetUser] ||= {};
+        const target = state.predictions[targetUser];
+        let blocked = 0;
+        Object.entries(attempted).forEach(([id, score]) => {
+          const match = matches.find(m => m.id === id);
+          const currentPrediction = target[id];
+          const finalResult = state.results[id];
+          if (!session.admin && (isLocked(match) || hasCompleteScore(currentPrediction) || hasCompleteScore(finalResult))) {
+            blocked += 1;
+            return;
+          }
+          target[id] = score;
+        });
+        await persist();
+        renderAll();
+        if (blocked && !session.admin) return toast("Algunas predicciones ya estaban bloqueadas");
+        toast(session.admin ? `Predicciones guardadas para ${targetUser}` : "Predicciones guardadas y bloqueadas");
+      } catch (error) {
+        console.error(error);
+        toast("No se pudo guardar. Recarga e intenta de nuevo");
+      }
     });
-    byId("saveResults").addEventListener("click", () => {
+    byId("saveResults").addEventListener("click", async () => {
       if (!session.admin) return toast("Debes entrar como administrador");
-      saveScoreSet("result", state.results);
-      persist();
-      renderAll();
-      toast("Marcadores finales guardados");
+      try {
+        if (db) await refreshLatestState();
+        document.querySelectorAll('[data-score^="result-home-"]').forEach(input => {
+          const id = input.dataset.score.replace("result-home-", "");
+          const away = document.querySelector(`[data-score="result-away-${id}"]`);
+          if (input.value === "" || away.value === "") return;
+          pendingResultIds.add(id);
+          state.results[id] = { home: Number(input.value), away: Number(away.value) };
+        });
+        await persist();
+        renderAll();
+        toast("Marcadores finales guardados");
+      } catch (error) {
+        console.error(error);
+        toast("No se pudo guardar. Recarga e intenta de nuevo");
+      }
     });
     byId("addUser").addEventListener("click", () => {
       if (!session.admin) return toast("Debes entrar como administrador");
@@ -1285,6 +1337,9 @@
     setInterval(() => {
       byId("colombiaTime").textContent = new Intl.DateTimeFormat("es-CO", { timeZone: "America/Bogota", hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date());
     }, 1000);
+    ["click", "keydown", "input", "change", "mousemove", "touchstart"].forEach(eventName => {
+      document.addEventListener(eventName, resetInactivityTimer, { passive: true });
+    });
     fillSelects();
     renderAll();
     loadLoginOptions();
