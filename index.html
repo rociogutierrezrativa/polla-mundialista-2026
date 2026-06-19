@@ -1166,11 +1166,16 @@
       if (!session.authenticated) return toast("Primero debes entrar con tu usuario");
       const targetUser = predictionTargetUser();
       const attempted = {};
+      const deleteIds = new Set();
       let invalid = 0;
       document.querySelectorAll('[data-score^="pred-home-"]').forEach(input => {
         const id = input.dataset.score.replace("pred-home-", "");
         const away = document.querySelector(`[data-score="pred-away-${id}"]`);
-        if (input.value === "" && away.value === "") return;
+        if (input.value === "" && away.value === "") {
+          const existingPrediction = state.predictions[targetUser]?.[id];
+          if (session.admin && hasCompleteScore(existingPrediction)) deleteIds.add(id);
+          return;
+        }
         if (input.value === "" || away.value === "") {
           invalid += 1;
           return;
@@ -1184,6 +1189,14 @@
         state.predictions[targetUser] ||= {};
         const target = state.predictions[targetUser];
         let blocked = 0;
+        deleteIds.forEach(id => {
+          const finalResult = state.results[id];
+          if (!session.admin || hasCompleteScore(finalResult)) {
+            blocked += 1;
+            return;
+          }
+          delete target[id];
+        });
         Object.entries(attempted).forEach(([id, score]) => {
           const match = matches.find(m => m.id === id);
           const currentPrediction = target[id];
@@ -1192,11 +1205,16 @@
             blocked += 1;
             return;
           }
+          if (session.admin && hasCompleteScore(finalResult)) {
+            blocked += 1;
+            return;
+          }
           target[id] = score;
         });
         await persist();
         renderAll();
         if (blocked && !session.admin) return toast("Algunas predicciones ya estaban bloqueadas");
+        if (blocked && session.admin) return toast("Algunos partidos ya tienen marcador final y no se modificaron");
         toast(session.admin ? `Predicciones guardadas para ${targetUser}` : "Predicciones guardadas y bloqueadas");
       } catch (error) {
         console.error(error);
