@@ -839,7 +839,7 @@
           if (p === 1) result += 1;
         });
         return { user, pts, exact, result, played };
-      }).sort((a, b) => b.pts - a.pts || b.exact - a.exact || a.user.localeCompare(b.user));
+      }).sort((a, b) => b.pts - a.pts || a.user.localeCompare(b.user));
       let lastPts = null, lastRank = 0;
       rows.forEach((row, idx) => {
         if (row.pts !== lastPts) lastRank = idx + 1;
